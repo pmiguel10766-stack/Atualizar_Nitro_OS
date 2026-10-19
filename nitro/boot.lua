@@ -1,5 +1,5 @@
 -- Nitro OS - /nitro/boot.lua
--- Primeiro boot: idioma, usuario e senha opcional. Depois: login (se tiver senha) e area de trabalho.
+-- Primeiro boot: idioma, usuario e senha opcional. Depois: preparacao, login e area de trabalho.
 
 local cl, cp = component, computer
 local gpu = cl.proxy(cl.list("gpu")())
@@ -58,7 +58,6 @@ local function footer(text)
 end
 
 ---------------------------------------------------------------- logo Nitro OS
--- C listrado + rosto vermelho. x,y = canto superior esquerdo; size = altura em linhas.
 local function logoSize()
   return (h >= 24) and 14 or 8
 end
@@ -72,7 +71,6 @@ local function drawLogo(x, y, size, bg, stripe)
   local r = math.floor(R * 0.64 + 0.5)
   local arm = math.floor(R * 0.65 + 0.5)
 
-  -- C listrado (uma listra fina por linha)
   gpu.setBackground(bg)
   gpu.setForeground(stripe)
   for ry = 0, R - 1 do
@@ -89,7 +87,6 @@ local function drawLogo(x, y, size, bg, stripe)
     end
   end
 
-  -- rosto vermelho
   local Rf = math.floor(R * 0.43 + 0.5)
   local fcx = R + math.floor(R * 0.28 + 0.5)
   local red, black = 0xD01818, 0x000000
@@ -132,7 +129,6 @@ end
 
 local bootBar = { x = 1, y = 1, w = 1 }
 
--- tela de carregamento: logo + nome (desenhados uma vez)
 local function bootBase()
   rect(1, 1, w, h, C.bg)
   local size = logoSize()
@@ -143,15 +139,6 @@ local function bootBase()
   bootBar.w = math.min(w - 10, 40)
   bootBar.x = math.floor((w - bootBar.w) / 2) + 1
   bootBar.y = ly + size + 4
-end
-
--- atualiza so o texto e a barra de carregamento
-local function bootProgress(pct, text)
-  local label = string.format("[%s %d%%]", (T and T.loaded) or "Carregando", pct)
-  rect(1, bootBar.y - 1, w, 1, C.bg)
-  put(math.floor((w - ulen(label)) / 2) + 1, bootBar.y - 1, label, C.text, C.bg)
-  rect(bootBar.x, bootBar.y, bootBar.w, 1, C.barbg)
-  rect(bootBar.x, bootBar.y, math.floor(bootBar.w * pct / 100), 1, C.accent)
 end
 
 ---------------------------------------------------------------- idiomas
@@ -166,6 +153,10 @@ local langs = {
     passConfirm = "Repita a senha:",
     passMismatch = "As senhas não são iguais",
     keysInput = "Enter OK    Esc Voltar",
+    prepHello = "Olá, %s",
+    prepPreparing = "Estamos preparando tudo para você...",
+    prepMinutes = "Isso pode levar alguns minutos.",
+    prepWarn = "Aviso: Não desligue o computador",
     loginTitle = "Entrar",
     loginHello = "Olá, %s",
     loginAsk = "Senha:",
@@ -178,7 +169,7 @@ local langs = {
     hint = "Clique em ◆ Nitro para abrir o Menu",
     soon = "Em breve",
     mFiles = "Arquivos",
-    mEditor = "Editor de Texto",
+    mEditor = "Editor Lua",
     mCalc = "Calculadora",
     mMonitor = "Monitor do Sistema",
     mNotes = "Notas",
@@ -190,8 +181,10 @@ local langs = {
     uptime = "Tempo ligado",
     bUp = "↑ Subir",
     bOpen = "Abrir",
+    bCreate = "+ Criar",
     bRename = "Renomear",
     bDelete = "Excluir",
+    bSave = "Salvar",
     bBack = "Voltar",
     bYes = "Sim",
     bNo = "Não",
@@ -200,10 +193,13 @@ local langs = {
     emptyDir = "(pasta vazia)",
     confirmDel = "Excluir %s?  [S/N]",
     sysWarn = "SISTEMA: %s - excluir mesmo assim?  [S/N]",
-    sysLocked = "Arquivo do sistema: não pode renomear",
+    sysLocked = "Arquivo do sistema: protegido",
     renamePrompt = "Novo nome:",
+    createPrompt = "Nome do novo arquivo:",
     deleted = "Excluído",
     renamed = "Renomeado",
+    created = "Criado",
+    saved = "Salvo com sucesso!",
     nameExists = "Esse nome já existe",
     nameBad = "Nome inválido",
     binaryFile = "Arquivo binário, não dá para mostrar",
@@ -250,6 +246,10 @@ local langs = {
     passConfirm = "Repeat the password:",
     passMismatch = "Passwords do not match",
     keysInput = "Enter OK    Esc Back",
+    prepHello = "Hello, %s",
+    prepPreparing = "We are getting everything ready for you...",
+    prepMinutes = "This might take a few minutes.",
+    prepWarn = "Warning: Do not turn off your computer",
     loginTitle = "Sign in",
     loginHello = "Hello, %s",
     loginAsk = "Password:",
@@ -262,7 +262,7 @@ local langs = {
     hint = "Click ◆ Nitro to open the Menu",
     soon = "Coming soon",
     mFiles = "Files",
-    mEditor = "Text Editor",
+    mEditor = "Lua Editor",
     mCalc = "Calculator",
     mMonitor = "System Monitor",
     mNotes = "Notes",
@@ -274,8 +274,10 @@ local langs = {
     uptime = "Uptime",
     bUp = "↑ Up",
     bOpen = "Open",
+    bCreate = "+ Create",
     bRename = "Rename",
     bDelete = "Delete",
+    bSave = "Save",
     bBack = "Back",
     bYes = "Yes",
     bNo = "No",
@@ -284,10 +286,13 @@ local langs = {
     emptyDir = "(empty folder)",
     confirmDel = "Delete %s?  [Y/N]",
     sysWarn = "SYSTEM: %s - delete anyway?  [Y/N]",
-    sysLocked = "System file: cannot be renamed",
+    sysLocked = "System file: protected",
     renamePrompt = "New name:",
+    createPrompt = "New file name:",
     deleted = "Deleted",
     renamed = "Renamed",
+    created = "Created",
+    saved = "Successfully saved!",
     nameExists = "That name already exists",
     nameBad = "Invalid name",
     binaryFile = "Binary file, cannot display",
@@ -328,6 +333,15 @@ local langs = {
 
 local T = langs[1].t
 
+local function bootProgress(pct, text)
+  local loadedLabel = (T and T.loaded) or "Carregando"
+  local label = string.format("[%s %d%%]", loadedLabel, pct)
+  rect(1, bootBar.y - 1, w, 1, C.bg)
+  put(math.floor((w - ulen(label)) / 2) + 1, bootBar.y - 1, label, C.text, C.bg)
+  rect(bootBar.x, bootBar.y, bootBar.w, 1, C.barbg)
+  rect(bootBar.x, bootBar.y, math.floor(bootBar.w * pct / 100), 1, C.accent)
+end
+
 ---------------------------------------------------------------- tela de erro (codigo MX)
 local function classify(err, default)
   local s = tostring(err):lower()
@@ -337,8 +351,6 @@ local function classify(err, default)
   return default
 end
 
--- fundo preto, moldura vermelha, icone [X], codigo MX e detalhe tecnico.
--- canContinue = true: Enter continua. false: Enter reinicia o computador.
 local function errorScreen(code, detail, canContinue)
   local ew = math.min(w - 4, 60)
   local eh = math.min(h - 4, 12)
@@ -375,7 +387,6 @@ local function errorScreen(code, detail, canContinue)
   end
   if not canContinue then cp.shutdown(true) end
 end
-
 
 ---------------------------------------------------------------- moldura
 local function frame(step, title)
@@ -427,7 +438,6 @@ local function readFile(path)
   return data
 end
 
--- hash simples, so para nao guardar a senha em texto puro (nao e seguranca real)
 local function hash(s)
   s = "nitro:" .. s
   local x = 5381
@@ -458,7 +468,6 @@ local function saveConfig(cfg)
   fs.close(hnd)
 end
 
--- caixa de texto. Devolve (texto, "enter") ou (texto, "back") se apertar Esc
 local function input(y, masked, maxLen)
   local text = ""
   local function draw()
@@ -517,6 +526,40 @@ local function chooseLanguage()
   end
 end
 
+local function prepareUserScreen(cfg)
+  rect(1, 1, w, h, C.bg)
+  rect(1, 1, w, 1, C.panel)
+  put(2, 1, "◆ NITRO OS", C.accent, C.panel)
+
+  rect(px, py, pw, ph, C.panel)
+  local line = string.rep("─", pw - 2)
+  put(px, py, "╭" .. line .. "╮", C.accent, C.panel)
+  for r = 1, ph - 2 do
+    put(px, py + r, "│", C.accent, C.panel)
+    put(px + pw - 1, py + r, "│", C.accent, C.panel)
+  end
+  put(px, py + ph - 1, "╰" .. line .. "╯", C.accent, C.panel)
+
+  center(py + 3, string.format(T.prepHello, cfg.user), C.text, C.panel)
+  center(py + 5, T.prepPreparing, C.dim, C.panel)
+  center(py + 6, T.prepMinutes, C.dim, C.panel)
+
+  local barW = math.min(cw, 36)
+  local barX = math.floor((w - barW) / 2) + 1
+  local barY = py + 9
+
+  center(py + ph - 3, "⚠️ " .. T.prepWarn, C.warn, C.panel)
+
+  for pct = 0, 100, 4 do
+    rect(barX, barY, barW, 1, C.barbg)
+    rect(barX, barY, math.floor(barW * pct / 100), 1, C.accent)
+    local pctText = string.format("%d%%", pct)
+    center(barY + 1, pctText, C.text, C.panel)
+    pause(0.08)
+  end
+  pause(0.4)
+end
+
 local function setup()
   local cfg = {}
   local step, pending = 1, nil
@@ -550,6 +593,7 @@ local function setup()
         step = 2
       elseif pass == "" then
         cfg.hash = nil
+        prepareUserScreen(cfg)
         return cfg
       else
         pending = pass
@@ -565,6 +609,7 @@ local function setup()
         step = 3
       elseif again == pending then
         cfg.hash = hash(pending)
+        prepareUserScreen(cfg)
         return cfg
       else
         message(T.passMismatch, C.err)
@@ -622,7 +667,6 @@ end
 ---------------------------------------------------------------- rede (Internet Card / Wireless Network Card)
 local NET_TEST = "https://raw.githubusercontent.com/pmiguel10766-stack/-opencomputers-script/refs/heads/main/files.txt"
 
--- descobre quais placas de rede existem e em que estado estao
 local function netInfo()
   local info = { types = {}, state = "none", modem = nil, wireless = false }
   local netAddr = cl.list("internet")()
@@ -648,7 +692,6 @@ local function netInfo()
   return info
 end
 
--- icone da barra: 3 barrinhas + 1 simbolo (barras, simbolo, cor das barras, cor do simbolo)
 local function wifiGlyph(info)
   local s = info.state
   if s == "ok" then
@@ -663,7 +706,6 @@ local function wifiGlyph(info)
   return "▂▄▆", "×", C.dim, C.err
 end
 
--- testa de verdade: abre uma conexao HTTP e mede o tempo
 local function netTest()
   local addr = cl.list("internet")()
   if not addr then return false, T.wifiNoCard end
@@ -721,7 +763,6 @@ local function wifiApp()
     local info = netInfo()
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
 
-    -- tipo(s) de placa
     put(ix, self.y + 2, T.wifiType .. ":", C.dim, C.panel)
     if #info.types == 0 then
       put(ix + 9, self.y + 2, "-", C.text, C.panel)
@@ -730,7 +771,6 @@ local function wifiApp()
       put(ix + 9, self.y + 1 + i, name, C.text, C.panel, iw - 9)
     end
 
-    -- status
     local text, color = T.wifiNone, C.err
     if info.state == "ok" then
       text, color = T.wifiOk, C.ok
@@ -744,13 +784,11 @@ local function wifiApp()
     put(ix, self.y + 4, T.wifiStatus .. ":", C.dim, C.panel)
     put(ix + 9, self.y + 4, text, color, C.panel, iw - 9)
 
-    -- resultado do teste e botao
     if result ~= "" then put(ix, self.y + 5, result, resultColor, C.panel, iw) end
     local label = testLabel()
     rect(ix, testY, ulen(label), 1, C.accent)
     put(ix, testY, label, C.bg, C.accent)
 
-    -- alcance do sinal (so Wireless Network Card)
     if info.wireless then
       local cur = strength(info)
       put(ix, rangeY - 1, T.wifiRange .. ": " .. cur .. "/400", C.dim, C.panel, iw)
@@ -890,7 +928,7 @@ local function monitorBody(win)
   put(x, win.y + 8, T.uptime .. ": " .. fmtTime(cp.uptime()), C.text, C.panel, bw)
 end
 
----------------------------------------------------------------- app Arquivos
+---------------------------------------------------------------- app Arquivos com Criar Arquivo
 local function joinPath(dir, name)
   if dir == "/" then return "/" .. name end
   return dir .. "/" .. name
@@ -1024,6 +1062,35 @@ local function filesApp()
     st.msg = ""
   end
 
+  local function startCreate()
+    st.mode = "create"
+    st.input = ""
+    st.msg = ""
+  end
+
+  local function doCreate()
+    local name = st.input:match("^%s*(.-)%s*$")
+    if name == "" or name:find("/", 1, true) then
+      setMsg(T.nameBad, C.err)
+      return
+    end
+    local target = joinPath(st.dir, name)
+    if fs.exists(target) then
+      setMsg(T.nameExists, C.err)
+      return
+    end
+    local hnd = fs.open(target, "w")
+    if hnd then
+      fs.write(hnd, "")
+      fs.close(hnd)
+      reload(name)
+      setMsg(T.created, C.ok)
+    else
+      setMsg(T.errPrefix .. name, C.err)
+    end
+    st.mode = "list"
+  end
+
   local function startRename()
     local it = selected()
     if not it then return end
@@ -1094,8 +1161,8 @@ local function filesApp()
   end
 
   local actions = {
-    up = goUp, open = openItem, rename = startRename, delete = startDelete,
-    yes = doDelete, no = backToList, ok = doRename, cancel = backToList,
+    up = goUp, open = openItem, create = startCreate, rename = startRename, delete = startDelete,
+    yes = doDelete, no = backToList, ok = function() if st.mode == "create" then doCreate() else doRename() end end, cancel = backToList,
     back = backToList,
   }
 
@@ -1105,10 +1172,10 @@ local function filesApp()
       defs = { { "back", T.bBack } }
     elseif st.mode == "confirm" then
       defs = { { "yes", T.bYes }, { "no", T.bNo } }
-    elseif st.mode == "rename" then
+    elseif st.mode == "rename" or st.mode == "create" then
       defs = { { "ok", T.bOk }, { "cancel", T.bCancel } }
     else
-      defs = { { "up", T.bUp }, { "open", T.bOpen },
+      defs = { { "up", T.bUp }, { "open", T.bOpen }, { "create", T.bCreate },
                { "rename", T.bRename }, { "delete", T.bDelete } }
     end
     local out, x = {}, ix
@@ -1157,9 +1224,10 @@ local function filesApp()
       end
     end
 
-    if st.mode == "rename" then
+    if st.mode == "rename" or st.mode == "create" then
       rect(ix, statusY, iw, 1, C.barbg)
-      put(ix + 1, statusY, T.renamePrompt .. " " .. st.input .. "_", C.text, C.barbg, iw - 2)
+      local promptText = (st.mode == "create") and T.createPrompt or T.renamePrompt
+      put(ix + 1, statusY, promptText .. " " .. st.input .. "_", C.text, C.barbg, iw - 2)
       if st.msg ~= "" then put(ix, statusY - 1, st.msg, st.msgColor, C.panel, iw) end
     elseif st.mode == "view" then
       local last = math.min(#st.lines, st.vfirst + rows - 1)
@@ -1197,9 +1265,9 @@ local function filesApp()
   end
 
   win.onKey = function(self, char, code)
-    if st.mode == "rename" then
+    if st.mode == "rename" or st.mode == "create" then
       if code == 28 then
-        doRename()
+        if st.mode == "create" then doCreate() else doRename() end
       elseif code == 1 then
         backToList()
       elseif code == 14 then
@@ -1260,6 +1328,145 @@ local function filesApp()
   end
 
   reload()
+  return win
+end
+
+---------------------------------------------------------------- app Editor Lua
+local function luaEditorApp()
+  local win = {
+    title = T.mEditor,
+    w = math.min(w - 2, 60),
+    h = math.min(h - 2, 18),
+  }
+  win.x = math.floor((w - win.w) / 2) + 1
+  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
+
+  local ix, iw = win.x + 2, win.w - 4
+  local btnY, listY = win.y + 2, win.y + 4
+  local rows = win.h - 8
+  local statusY = win.y + win.h - 3
+
+  local st = {
+    lines = { "-- Novo script Lua no Nitro OS", "print('Ola, Nitro OS!')" },
+    cy = 1, cx = 1, vfirst = 1, msg = "", msgColor = C.warn, filename = "/script.lua"
+  }
+
+  local function setMsg(text, color)
+    st.msg, st.msgColor = text, color or C.warn
+  end
+
+  local function saveFile()
+    local hnd = fs.open(st.filename, "w")
+    if not hnd then
+      setMsg(T.errPrefix .. "Salvar", C.err)
+      return
+    end
+    for _, l in ipairs(st.lines) do
+      fs.write(hnd, l .. "\n")
+    end
+    fs.close(hnd)
+    setMsg(T.saved, C.ok)
+  end
+
+  local function curButtons()
+    local defs = { { "save", T.bSave } }
+    local out, x = {}, ix
+    for _, d in ipairs(defs) do
+      local label = " " .. d[2] .. " "
+      out[#out + 1] = { id = d[1], x = x, label = label }
+      x = x + ulen(label) + 1
+    end
+    return out
+  end
+
+  win.body = function(self)
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(ix, self.y + 1, st.filename, C.dim, C.panel, iw)
+
+    for _, b in ipairs(curButtons()) do
+      put(b.x, btnY, b.label, C.bg, C.ok)
+    end
+
+    for n = 0, rows - 1 do
+      local lineIdx = st.vfirst + n
+      local line = st.lines[lineIdx]
+      local y = listY + n
+      if line then
+        put(ix, y, string.format("%2d│ %s", lineIdx, line), C.text, C.panel, iw)
+      else
+        put(ix, y, string.format("%2d│", lineIdx), C.dim, C.panel, iw)
+      end
+    end
+
+    if st.msg ~= "" then
+      put(ix, statusY, st.msg, st.msgColor, C.panel, iw)
+    else
+      put(ix, statusY, string.format("Ln %d, Col %d", st.cy, st.cx), C.dim, C.panel, iw)
+    end
+  end
+
+  win.onTouch = function(self, x, y)
+    if y == btnY then
+      for _, b in ipairs(curButtons()) do
+        if x >= b.x and x < b.x + ulen(b.label) then
+          saveFile()
+          return true
+        end
+      end
+    elseif y >= listY and y < listY + rows then
+      local clickedRow = st.vfirst + (y - listY)
+      if clickedRow <= #st.lines then
+        st.cy = clickedRow
+        st.cx = math.min(st.cx, ulen(st.lines[st.cy]) + 1)
+        return true
+      end
+    end
+    return false
+  end
+
+  win.onKey = function(self, char, code)
+    if code == 200 then -- Seta cima
+      st.cy = math.max(1, st.cy - 1)
+      if st.cy < st.vfirst then st.vfirst = st.cy end
+      st.cx = math.min(st.cx, ulen(st.lines[st.cy]) + 1)
+      return true
+    elseif code == 208 then -- Seta baixo
+      st.cy = math.min(#st.lines, st.cy + 1)
+      if st.cy >= st.vfirst + rows then st.vfirst = st.cy - rows + 1 end
+      st.cx = math.min(st.cx, ulen(st.lines[st.cy]) + 1)
+      return true
+    elseif code == 14 then -- Backspace
+      local line = st.lines[st.cy]
+      if st.cx > 1 then
+        st.lines[st.cy] = usub(line, 1, st.cx - 2) .. usub(line, st.cx)
+        st.cx = st.cx - 1
+      elseif st.cy > 1 then
+        local prevLine = st.lines[st.cy - 1]
+        st.cx = ulen(prevLine) + 1
+        st.lines[st.cy - 1] = prevLine .. line
+        table.remove(st.lines, st.cy)
+        st.cy = st.cy - 1
+        if st.cy < st.vfirst then st.vfirst = st.cy end
+      end
+      return true
+    elseif code == 28 then -- Enter
+      local line = st.lines[st.cy]
+      local rest = usub(line, st.cx)
+      st.lines[st.cy] = usub(line, 1, st.cx - 1)
+      table.insert(st.lines, st.cy + 1, rest)
+      st.cy = st.cy + 1
+      st.cx = 1
+      if st.cy >= st.vfirst + rows then st.vfirst = st.cy - rows + 1 end
+      return true
+    elseif char and char >= 32 and char ~= 127 then
+      local line = st.lines[st.cy]
+      st.lines[st.cy] = usub(line, 1, st.cx - 1) .. uchar(char) .. usub(line, st.cx)
+      st.cx = st.cx + 1
+      return true
+    end
+    return false
+  end
+
   return win
 end
 
@@ -1554,6 +1761,8 @@ local function desktop(cfg)
       win = newWindow(T.mMonitor, monitorBody, true)
     elseif it.id == "files" then
       win = guard(filesApp)
+    elseif it.id == "editor" then
+      win = guard(luaEditorApp)
     elseif it.id == "calc" then
       win = guard(calcApp)
     else
