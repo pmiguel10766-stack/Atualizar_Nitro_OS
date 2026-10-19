@@ -1,5 +1,5 @@
 -- Nitro OS - /nitro/boot.lua
--- Sistema Operacional para OpenComputers com Janelas Móveis, Maximizar/Minimizar, Editor Lua e Gestão de Arquivos/Disquetes.
+-- Sistema Operacional para OpenComputers com Janelas Móveis, Painel de Configurações, Editor Lua e Gestão de Disquetes.
 
 local cl, cp = component, computer
 local gpu = cl.proxy(cl.list("gpu")())
@@ -173,6 +173,7 @@ local langs = {
     mFloppy = "Gestor Disquetes",
     mCalc = "Calculadora",
     mMonitor = "Monitor do Sistema",
+    mSettings = "Configurações",
     mNotes = "Notas",
     mPrinter = "Impressora 3D",
     mRestart = "Reiniciar",
@@ -271,6 +272,7 @@ local langs = {
     mFloppy = "Floppy Manager",
     mCalc = "Calculator",
     mMonitor = "System Monitor",
+    mSettings = "Settings",
     mNotes = "Notes",
     mPrinter = "3D Printer",
     mRestart = "Restart",
@@ -903,11 +905,9 @@ end
 
 local function handleWindowControls(win, x, y)
   if y == win.y then
-    -- Minimizar [_]
     if x >= win.x + win.w - 10 and x <= win.x + win.w - 8 then
       win.minimized = true
       return "minimize"
-    -- Maximizar / Restaurar [□]
     elseif x >= win.x + win.w - 7 and x <= win.x + win.w - 5 then
       if win.maximized then
         win.x, win.y, win.w, win.h = win.origX, win.origY, win.origW, win.origH
@@ -918,7 +918,6 @@ local function handleWindowControls(win, x, y)
         win.maximized = true
       end
       return "maximize"
-    -- Fechar [X]
     elseif x >= win.x + win.w - 4 and x <= win.x + win.w - 2 then
       return "close"
     end
@@ -954,6 +953,73 @@ local function monitorBody(win)
 
   rect(x, win.y + 8, bw, 1, C.panel)
   put(x, win.y + 8, T.uptime .. ": " .. fmtTime(cp.uptime()), C.text, C.panel, bw)
+end
+
+---------------------------------------------------------------- app Configurações
+local function settingsApp(cfg)
+  local win = newWindow(T.mSettings, nil, false)
+  win.w = math.min(w - 2, 54)
+  win.h = math.min(h - 2, 16)
+  win.x = math.floor((w - win.w) / 2) + 1
+  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
+
+  local sel = 1
+  local options = {
+    { label = "Utilizador: " .. cfg.user, action = "user" },
+    { label = "Idioma: " .. langs[cfg.lang].name, action = "lang" },
+    { label = "Tema: Vermelho Nitro", action = "theme" },
+    { label = "Estado do Sistema: OK", action = "sys" },
+  }
+
+  win.body = function(self)
+    local ix, iw = self.x + 2, self.w - 4
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(ix, self.y + 2, "PAINEL DE CONFIGURAÇÕES", C.accent, C.panel)
+    put(ix, self.y + 3, string.rep("─", iw), C.dim, C.panel)
+
+    for i, opt in ipairs(options) do
+      local y = self.y + 5 + (i - 1) * 2
+      if i == sel then
+        rect(ix - 1, y, iw + 2, 1, C.accent)
+        put(ix, y, "▶ " .. opt.label, C.bg, C.accent, iw)
+      else
+        put(ix, y, "  " .. opt.label, C.text, C.panel, iw)
+      end
+    end
+    put(ix, self.y + self.h - 3, "Enter Alterar    ↑↓ Navegar", C.dim, C.panel, iw)
+  end
+
+  win.onTouch = function(self, x, y)
+    for i = 1, #options do
+      local optY = self.y + 5 + (i - 1) * 2
+      if y == optY and x >= self.x + 1 and x < self.x + self.w - 1 then
+        sel = i
+        return true
+      end
+    end
+    return false
+  end
+
+  win.onKey = function(self, char, code)
+    if code == 200 and sel > 1 then
+      sel = sel - 1
+      return true
+    elseif code == 208 and sel < #options then
+      sel = sel + 1
+      return true
+    elseif code == 28 then
+      if options[sel].action == "lang" then
+        cfg.lang = (cfg.lang % #langs) + 1
+        T = langs[cfg.lang].t
+        options[2].label = "Idioma: " .. langs[cfg.lang].name
+        saveConfig(cfg)
+        return true
+      end
+    end
+    return false
+  end
+
+  return win
 end
 
 ---------------------------------------------------------------- app Arquivos
@@ -1809,6 +1875,7 @@ local function desktop(cfg)
     { id = "floppy", label = T.mFloppy },
     { id = "calc", label = T.mCalc },
     { id = "monitor", label = T.mMonitor },
+    { id = "settings", label = T.mSettings },
     { id = "notes", label = T.mNotes },
     { id = "printer", label = T.mPrinter },
     { sep = true },
@@ -1868,6 +1935,8 @@ local function desktop(cfg)
       cp.shutdown()
     elseif it.id == "monitor" then
       win = newWindow(T.mMonitor, monitorBody, true)
+    elseif it.id == "settings" then
+      win = guard(settingsApp, cfg)
     elseif it.id == "files" then
       win = guard(filesApp)
     elseif it.id == "editor" then
