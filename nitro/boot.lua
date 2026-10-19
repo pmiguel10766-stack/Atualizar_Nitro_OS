@@ -1,5 +1,5 @@
 -- Nitro OS - /nitro/boot.lua
--- Primeiro boot: idioma, usuario e senha opcional. Depois: preparacao, login e area de trabalho.
+-- Sistema Operacional para OpenComputers com Janelas Móveis, Maximizar/Minimizar, Editor Lua e Gestão de Arquivos/Disquetes.
 
 local cl, cp = component, computer
 local gpu = cl.proxy(cl.list("gpu")())
@@ -186,6 +186,7 @@ local langs = {
     bRename = "Renomear",
     bDelete = "Excluir",
     bSave = "Salvar",
+    bRun = "▶ Executar",
     bBack = "Voltar",
     bYes = "Sim",
     bNo = "Não",
@@ -203,6 +204,7 @@ local langs = {
     renamed = "Renomeado",
     created = "Criado",
     saved = "Salvo com sucesso!",
+    executed = "Executado com sucesso!",
     nameExists = "Esse nome já existe",
     nameBad = "Nome inválido",
     binaryFile = "Arquivo binário, não dá para mostrar",
@@ -282,6 +284,7 @@ local langs = {
     bRename = "Rename",
     bDelete = "Delete",
     bSave = "Save",
+    bRun = "▶ Run",
     bBack = "Back",
     bYes = "Yes",
     bNo = "No",
@@ -299,6 +302,7 @@ local langs = {
     renamed = "Renamed",
     created = "Created",
     saved = "Successfully saved!",
+    executed = "Executed successfully!",
     nameExists = "That name already exists",
     nameBad = "Invalid name",
     binaryFile = "Binary file, cannot display",
@@ -348,7 +352,7 @@ local function bootProgress(pct, text)
   rect(bootBar.x, bootBar.y, math.floor(bootBar.w * pct / 100), 1, C.accent)
 end
 
----------------------------------------------------------------- tela de erro (codigo MX)
+---------------------------------------------------------------- tela de erro
 local function classify(err, default)
   local s = tostring(err):lower()
   if s:find("not enough memory", 1, true) or s:find("out of memory", 1, true) then
@@ -378,8 +382,7 @@ local function errorScreen(code, detail, canContinue)
   local tx, tw = ix + 12, ew - 17
   put(tx, ey + 2, canContinue and T.errTitleApp or T.errTitle, C.accent, C.bg, tw)
   put(tx, ey + 3, string.rep("─", tw), C.accent, C.bg)
-  put(tx, ey + 4, string.format("MX-%d  %s", code, T["e" .. code] or T.e208),
-    C.text, C.bg, tw)
+  put(tx, ey + 4, string.format("MX-%d  %s", code, T["e" .. code] or T.e208), C.text, C.bg, tw)
   local text = tostring(detail or ""):gsub("%s+", " ")
   for n = 0, 2 do
     local part = usub(text, n * tw + 1, (n + 1) * tw)
@@ -469,8 +472,7 @@ local function saveConfig(cfg)
   fs.makeDirectory("/nitro")
   local hnd = fs.open(CONFIG, "w")
   local hashText = cfg.hash and string.format("%q", cfg.hash) or "nil"
-  fs.write(hnd, string.format("return {user=%q,lang=%d,hash=%s}",
-    cfg.user, cfg.lang, hashText))
+  fs.write(hnd, string.format("return {user=%q,lang=%d,hash=%s}", cfg.user, cfg.lang, hashText))
   fs.close(hnd)
 end
 
@@ -573,7 +575,6 @@ local function setup()
     if step == 1 then
       cfg.lang = chooseLanguage()
       step = 2
-
     elseif step == 2 then
       frame(2, T.userTitle)
       put(cx, py + 2, T.userAsk, C.dim, C.panel, cw)
@@ -589,7 +590,6 @@ local function setup()
         cfg.user = name
         step = 3
       end
-
     elseif step == 3 then
       frame(3, T.passTitle)
       put(cx, py + 2, T.passAsk, C.dim, C.panel, cw)
@@ -605,7 +605,6 @@ local function setup()
         pending = pass
         step = 4
       end
-
     elseif step == 4 then
       frame(3, T.passTitle)
       put(cx, py + 2, T.passConfirm, C.dim, C.panel, cw)
@@ -667,10 +666,10 @@ local function drawBox(x, y, bw, bh, title)
     put(x + bw - 1, y + r, "│", C.accent, C.panel)
   end
   put(x, y + bh - 1, "╰" .. line .. "╯", C.accent, C.panel)
-  if title then put(x + 2, y, " " .. title .. " ", C.text, C.panel, bw - 8) end
+  if title then put(x + 2, y, " " .. title .. " ", C.text, C.panel, bw - 12) end
 end
 
----------------------------------------------------------------- rede (Internet Card / Wireless Network Card)
+---------------------------------------------------------------- rede
 local NET_TEST = "https://raw.githubusercontent.com/pmiguel10766-stack/-opencomputers-script/refs/heads/main/files.txt"
 
 local function netInfo()
@@ -882,7 +881,7 @@ local function drawMenu(items)
   end
 end
 
----------------------------------------------------------------- janelas
+---------------------------------------------------------------- janelas com arraste e maximizar/minimizar
 local function newWindow(title, body, live)
   local ww = math.min(w - 4, 46)
   local wh = math.min(h - 3, 11)
@@ -890,23 +889,46 @@ local function newWindow(title, body, live)
     title = title, body = body, live = live, w = ww, h = wh,
     x = math.floor((w - ww) / 2) + 1,
     y = math.floor((h - 1 - wh) / 2) + 1,
+    origW = ww, origH = wh, origX = math.floor((w - ww) / 2) + 1, origY = math.floor((h - 1 - wh) / 2) + 1,
+    maximized = false, minimized = false
   }
 end
 
 local function drawWindow(win)
+  if win.minimized then return end
   drawBox(win.x, win.y, win.w, win.h, win.title)
-  put(win.x + win.w - 5, win.y, "[X]", C.bg, C.accent)
+  put(win.x + win.w - 10, win.y, "[_][□][X]", C.text, C.panel)
   win.body(win)
 end
 
-local function closeHit(win, x, y)
-  return y == win.y and x >= win.x + win.w - 5 and x <= win.x + win.w - 3
+local function handleWindowControls(win, x, y)
+  if y == win.y then
+    -- Minimizar [_]
+    if x >= win.x + win.w - 10 and x <= win.x + win.w - 8 then
+      win.minimized = true
+      return "minimize"
+    -- Maximizar / Restaurar [□]
+    elseif x >= win.x + win.w - 7 and x <= win.x + win.w - 5 then
+      if win.maximized then
+        win.x, win.y, win.w, win.h = win.origX, win.origY, win.origW, win.origH
+        win.maximized = false
+      else
+        win.origX, win.origY, win.origW, win.origH = win.x, win.y, win.w, win.h
+        win.x, win.y, win.w, win.h = 1, 1, w, h - 1
+        win.maximized = true
+      end
+      return "maximize"
+    -- Fechar [X]
+    elseif x >= win.x + win.w - 4 and x <= win.x + win.w - 2 then
+      return "close"
+    end
+  end
+  return nil
 end
 
 local function soonBody(win)
   local s = T.soon
-  put(win.x + math.floor((win.w - ulen(s)) / 2), win.y + math.floor(win.h / 2),
-    s, C.dim, C.panel)
+  put(win.x + math.floor((win.w - ulen(s)) / 2), win.y + math.floor(win.h / 2), s, C.dim, C.panel)
 end
 
 local function monitorBody(win)
@@ -934,7 +956,7 @@ local function monitorBody(win)
   put(x, win.y + 8, T.uptime .. ": " .. fmtTime(cp.uptime()), C.text, C.panel, bw)
 end
 
----------------------------------------------------------------- app Arquivos com Criar Arquivo
+---------------------------------------------------------------- app Arquivos
 local function joinPath(dir, name)
   if dir == "/" then return "/" .. name end
   return dir .. "/" .. name
@@ -980,18 +1002,11 @@ local function readPreview(path)
 end
 
 local function filesApp()
-  local win = {
-    title = T.mFiles,
-    w = math.min(w - 2, 60),
-    h = math.min(h - 2, 18),
-  }
+  local win = newWindow(T.mFiles, nil, false)
+  win.w = math.min(w - 2, 60)
+  win.h = math.min(h - 2, 18)
   win.x = math.floor((w - win.w) / 2) + 1
   win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
-
-  local ix, iw = win.x + 2, win.w - 4
-  local btnY, listY = win.y + 2, win.y + 4
-  local rows = win.h - 8
-  local statusY = win.y + win.h - 3
 
   local st = {
     dir = "/", items = {}, sel = 1, first = 1, mode = "list",
@@ -1006,6 +1021,7 @@ local function filesApp()
   local function selected() return st.items[st.sel] end
 
   local function keepVisible()
+    local rows = win.h - 8
     if st.sel > #st.items then st.sel = #st.items end
     if st.sel < 1 then st.sel = 1 end
     if st.sel < st.first then st.first = st.sel end
@@ -1173,6 +1189,7 @@ local function filesApp()
   }
 
   local function curButtons()
+    local ix = win.x + 2
     local defs
     if st.mode == "view" then
       defs = { { "back", T.bBack } }
@@ -1194,6 +1211,11 @@ local function filesApp()
   end
 
   win.body = function(self)
+    local ix, iw = self.x + 2, self.w - 4
+    local btnY, listY = self.y + 2, self.y + 4
+    local rows = self.h - 8
+    local statusY = self.y + self.h - 3
+
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
     local header = (st.mode == "view") and st.viewName or st.dir
     put(ix, self.y + 1, header, C.dim, C.panel, iw)
@@ -1237,14 +1259,15 @@ local function filesApp()
       if st.msg ~= "" then put(ix, statusY - 1, st.msg, st.msgColor, C.panel, iw) end
     elseif st.mode == "view" then
       local last = math.min(#st.lines, st.vfirst + rows - 1)
-      put(ix, statusY, string.format("%d-%d / %d", st.vfirst, last, #st.lines),
-        C.dim, C.panel, iw)
+      put(ix, statusY, string.format("%d-%d / %d", st.vfirst, last, #st.lines), C.dim, C.panel, iw)
     elseif st.msg ~= "" then
       put(ix, statusY, st.msg, st.msgColor, C.panel, iw)
     end
   end
 
   win.onTouch = function(self, x, y)
+    local btnY, listY = self.y + 2, self.y + 4
+    local rows = self.h - 8
     if y == btnY then
       for _, b in ipairs(curButtons()) do
         if x >= b.x and x < b.x + ulen(b.label) then
@@ -1271,6 +1294,7 @@ local function filesApp()
   end
 
   win.onKey = function(self, char, code)
+    local rows = self.h - 8
     if st.mode == "rename" or st.mode == "create" then
       if code == 28 then
         if st.mode == "create" then doCreate() else doRename() end
@@ -1323,34 +1347,17 @@ local function filesApp()
     return false
   end
 
-  win.onScroll = function(self, dir)
-    if st.mode == "view" then
-      local maxFirst = math.max(1, #st.lines - rows + 1)
-      st.vfirst = math.max(1, math.min(st.vfirst - dir * 3, maxFirst))
-    elseif st.mode == "list" then
-      st.sel = st.sel - dir
-      keepVisible()
-    end
-  end
-
   reload()
   return win
 end
 
 ---------------------------------------------------------------- app Editor Lua
 local function luaEditorApp()
-  local win = {
-    title = T.mEditor,
-    w = math.min(w - 2, 60),
-    h = math.min(h - 2, 18),
-  }
+  local win = newWindow(T.mEditor, nil, false)
+  win.w = math.min(w - 2, 60)
+  win.h = math.min(h - 2, 18)
   win.x = math.floor((w - win.w) / 2) + 1
   win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
-
-  local ix, iw = win.x + 2, win.w - 4
-  local btnY, listY = win.y + 2, win.y + 4
-  local rows = win.h - 8
-  local statusY = win.y + win.h - 3
 
   local st = {
     lines = { "-- Novo script Lua no Nitro OS", "print('Ola, Nitro OS!')" },
@@ -1374,23 +1381,44 @@ local function luaEditorApp()
     setMsg(T.saved, C.ok)
   end
 
+  local function runScript()
+    local codeStr = table.concat(st.lines, "\n")
+    local func, err = load(codeStr, "=editor", "t", _ENV)
+    if not func then
+      setMsg(T.errPrefix .. tostring(err), C.err)
+      return
+    end
+    local ok, runErr = pcall(func)
+    if ok then
+      setMsg(T.executed, C.ok)
+    else
+      setMsg(T.errPrefix .. tostring(runErr), C.err)
+    end
+  end
+
   local function curButtons()
-    local defs = { { "save", T.bSave } }
+    local ix = win.x + 2
+    local defs = { { "save", T.bSave, C.ok }, { "run", T.bRun, C.accent } }
     local out, x = {}, ix
     for _, d in ipairs(defs) do
       local label = " " .. d[2] .. " "
-      out[#out + 1] = { id = d[1], x = x, label = label }
+      out[#out + 1] = { id = d[1], x = x, label = label, color = d[3] }
       x = x + ulen(label) + 1
     end
     return out
   end
 
   win.body = function(self)
+    local ix, iw = self.x + 2, self.w - 4
+    local btnY, listY = self.y + 2, self.y + 4
+    local rows = self.h - 8
+    local statusY = self.y + self.h - 3
+
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
     put(ix, self.y + 1, st.filename, C.dim, C.panel, iw)
 
     for _, b in ipairs(curButtons()) do
-      put(b.x, btnY, b.label, C.bg, C.ok)
+      put(b.x, btnY, b.label, C.bg, b.color)
     end
 
     for n = 0, rows - 1 do
@@ -1412,10 +1440,16 @@ local function luaEditorApp()
   end
 
   win.onTouch = function(self, x, y)
+    local btnY, listY = self.y + 2, self.y + 4
+    local rows = self.h - 8
     if y == btnY then
       for _, b in ipairs(curButtons()) do
         if x >= b.x and x < b.x + ulen(b.label) then
-          saveFile()
+          if b.id == "save" then
+            saveFile()
+          elseif b.id == "run" then
+            runScript()
+          end
           return true
         end
       end
@@ -1431,6 +1465,7 @@ local function luaEditorApp()
   end
 
   win.onKey = function(self, char, code)
+    local rows = self.h - 8
     if code == 200 then
       st.cy = math.max(1, st.cy - 1)
       if st.cy < st.vfirst then st.vfirst = st.cy end
@@ -1478,18 +1513,13 @@ end
 
 ---------------------------------------------------------------- app Gestor de Disquetes
 local function floppyApp()
-  local win = {
-    title = T.mFloppy,
-    w = math.min(w - 2, 50),
-    h = math.min(h - 2, 14),
-  }
+  local win = newWindow(T.mFloppy, nil, false)
+  win.w = math.min(w - 2, 50)
+  win.h = math.min(h - 2, 14)
   win.x = math.floor((w - win.w) / 2) + 1
   win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
 
-  local ix, iw = win.x + 2, win.w - 4
   local floppyAddr = cl.list("filesystem")()
-  
-  -- Procura especificamente uma disquete se houver multiplas filesystems
   for addr in cl.list("filesystem") do
     if addr ~= cp.getBootAddress() then
       floppyAddr = addr
@@ -1498,6 +1528,7 @@ local function floppyApp()
   end
 
   win.body = function(self)
+    local ix, iw = self.x + 2, self.w - 4
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
     put(ix, self.y + 2, T.floppyTitle .. ":", C.dim, C.panel)
     
@@ -1555,7 +1586,9 @@ local function calcApply(a, b, o)
 end
 
 local function calcApp()
-  local win = { title = T.mCalc, w = 34, h = 11 }
+  local win = newWindow(T.mCalc, nil, false)
+  win.w = 34
+  win.h = 11
   win.x = math.floor((w - win.w) / 2) + 1
   win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
 
@@ -1785,6 +1818,8 @@ local function desktop(cfg)
   local menuOpen, win = false, nil
   local guard
   local notifText, notifTimer = nil, 0
+  local dragging = false
+  local dragOffsetX, dragOffsetY = 0, 0
 
   local function showNotif(msg)
     notifText = msg
@@ -1798,8 +1833,7 @@ local function desktop(cfg)
     drawLogo(math.floor((w - logoWidth(size)) / 2) + 1, ly, size, C.bg, 0x666666)
     put(math.floor((w - ulen(T.empty)) / 2), ly + size + 1, T.empty, C.dim, C.bg)
     put(math.floor((w - ulen(T.hint)) / 2), ly + size + 2, T.hint, C.dim, C.bg)
-    
-    -- Desenha notificacao de hardware se ativa
+
     if notifText and cp.uptime() < notifTimer then
       local nw = ulen(notifText) + 4
       local nx = w - nw - 2
@@ -1811,7 +1845,7 @@ local function desktop(cfg)
       notifText = nil
     end
 
-    if win then guard(drawWindow, win) end
+    if win and not win.minimized then guard(drawWindow, win) end
     drawTaskbar(cfg, menuOpen)
     if menuOpen then drawMenu(items) end
   end
@@ -1855,8 +1889,7 @@ local function desktop(cfg)
 
   while true do
     local ev, _, a, b, c = cp.pullSignal(0.5)
-    
-    -- Deteccao de novos dispositivos em tempo real
+
     if ev == "component_added" then
       showNotif("Dispositivo: " .. tostring(b))
       render()
@@ -1887,21 +1920,41 @@ local function desktop(cfg)
           menuOpen = false
           render()
         end
-      elseif win and closeHit(win, a, b) then
-        win = nil
+      elseif win and not win.minimized then
+        local action = handleWindowControls(win, a, b)
+        if action == "close" then
+          win = nil
+          render()
+        elseif action == "minimize" then
+          render()
+        elseif action == "maximize" then
+          render()
+        elseif b == win.y and a >= win.x and a < win.x + win.w - 10 then
+          dragging = true
+          dragOffsetX = a - win.x
+          dragOffsetY = b - win.y
+        elseif win.onTouch and inside(a, b, win.x, win.y, win.w, win.h) then
+          local handled = guard(win.onTouch, win, a, b)
+          if handled and win then guard(drawWindow, win) end
+        end
+      elseif win and win.minimized and b == h and a >= 15 and a <= 30 then
+        win.minimized = false
         render()
-      elseif win and win.onTouch and inside(a, b, win.x, win.y, win.w, win.h) then
-        local handled = guard(win.onTouch, win, a, b)
-        if handled and win then guard(drawWindow, win) end
       end
+    elseif ev == "drag" and dragging and win and not win.maximized then
+      win.x = math.max(1, math.min(w - win.w + 1, a - dragOffsetX))
+      win.y = math.max(1, math.min(h - win.h, b - dragOffsetY))
+      render()
+    elseif ev == "drop" then
+      dragging = false
     elseif ev == "scroll" then
-      if win and win.onScroll and not menuOpen then
+      if win and win.onScroll and not menuOpen and not win.minimized then
         guard(win.onScroll, win, c)
         if win then guard(drawWindow, win) end
       end
     elseif ev == "key_down" then
       local handled = false
-      if win and win.onKey and not menuOpen then
+      if win and win.onKey and not menuOpen and not win.minimized then
         handled = guard(win.onKey, win, a, b)
         if handled and win then guard(drawWindow, win) end
       end
