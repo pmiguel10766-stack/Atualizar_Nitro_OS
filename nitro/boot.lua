@@ -147,7 +147,10 @@ end
 
 -- atualiza so o texto e a barra de carregamento
 local function bootProgress(pct, text)
-  local label = string.format("[%s %d%%]", T.loaded, pct)
+  -- Exemplo de inicialização da tabela T no topo do boot.lua
+local T = {
+    loaded = "Carregando" -- ou o termo equivalente no idioma escolhido
+}
   rect(1, bootBar.y - 1, w, 1, C.bg)
   put(math.floor((w - ulen(label)) / 2) + 1, bootBar.y - 1, label, C.text, C.bg)
   rect(bootBar.x, bootBar.y, bootBar.w, 1, C.barbg)
