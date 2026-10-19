@@ -170,6 +170,7 @@ local langs = {
     soon = "Em breve",
     mFiles = "Arquivos",
     mEditor = "Editor Lua",
+    mFloppy = "Gestor Disquetes",
     mCalc = "Calculadora",
     mMonitor = "Monitor do Sistema",
     mNotes = "Notas",
@@ -191,6 +192,8 @@ local langs = {
     bOk = "OK",
     bCancel = "Cancelar",
     emptyDir = "(pasta vazia)",
+    noFloppy = "Nenhuma disquete inserida",
+    floppyTitle = "Disquete",
     confirmDel = "Excluir %s?  [S/N]",
     sysWarn = "SISTEMA: %s - excluir mesmo assim?  [S/N]",
     sysLocked = "Arquivo do sistema: protegido",
@@ -263,6 +266,7 @@ local langs = {
     soon = "Coming soon",
     mFiles = "Files",
     mEditor = "Lua Editor",
+    mFloppy = "Floppy Manager",
     mCalc = "Calculator",
     mMonitor = "System Monitor",
     mNotes = "Notes",
@@ -284,6 +288,8 @@ local langs = {
     bOk = "OK",
     bCancel = "Cancel",
     emptyDir = "(empty folder)",
+    noFloppy = "No floppy disk inserted",
+    floppyTitle = "Floppy Disk",
     confirmDel = "Delete %s?  [Y/N]",
     sysWarn = "SYSTEM: %s - delete anyway?  [Y/N]",
     sysLocked = "System file: protected",
@@ -1425,17 +1431,17 @@ local function luaEditorApp()
   end
 
   win.onKey = function(self, char, code)
-    if code == 200 then -- Seta cima
+    if code == 200 then
       st.cy = math.max(1, st.cy - 1)
       if st.cy < st.vfirst then st.vfirst = st.cy end
       st.cx = math.min(st.cx, ulen(st.lines[st.cy]) + 1)
       return true
-    elseif code == 208 then -- Seta baixo
+    elseif code == 208 then
       st.cy = math.min(#st.lines, st.cy + 1)
       if st.cy >= st.vfirst + rows then st.vfirst = st.cy - rows + 1 end
       st.cx = math.min(st.cx, ulen(st.lines[st.cy]) + 1)
       return true
-    elseif code == 14 then -- Backspace
+    elseif code == 14 then
       local line = st.lines[st.cy]
       if st.cx > 1 then
         st.lines[st.cy] = usub(line, 1, st.cx - 2) .. usub(line, st.cx)
@@ -1449,7 +1455,7 @@ local function luaEditorApp()
         if st.cy < st.vfirst then st.vfirst = st.cy end
       end
       return true
-    elseif code == 28 then -- Enter
+    elseif code == 28 then
       local line = st.lines[st.cy]
       local rest = usub(line, st.cx)
       st.lines[st.cy] = usub(line, 1, st.cx - 1)
@@ -1464,6 +1470,55 @@ local function luaEditorApp()
       st.cx = st.cx + 1
       return true
     end
+    return false
+  end
+
+  return win
+end
+
+---------------------------------------------------------------- app Gestor de Disquetes
+local function floppyApp()
+  local win = {
+    title = T.mFloppy,
+    w = math.min(w - 2, 50),
+    h = math.min(h - 2, 14),
+  }
+  win.x = math.floor((w - win.w) / 2) + 1
+  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
+
+  local ix, iw = win.x + 2, win.w - 4
+  local floppyAddr = cl.list("filesystem")()
+  
+  -- Procura especificamente uma disquete se houver multiplas filesystems
+  for addr in cl.list("filesystem") do
+    if addr ~= cp.getBootAddress() then
+      floppyAddr = addr
+      break
+    end
+  end
+
+  win.body = function(self)
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(ix, self.y + 2, T.floppyTitle .. ":", C.dim, C.panel)
+    
+    if not floppyAddr or not cl.proxy(floppyAddr) then
+      put(ix, self.y + 4, T.noFloppy, C.err, C.panel, iw)
+      return
+    end
+
+    local fproxy = cl.proxy(floppyAddr)
+    local okSpace, spaceTotal = pcall(fproxy.spaceTotal)
+    local okUsed, spaceUsed = pcall(fproxy.spaceUsed)
+    
+    put(ix, self.y + 4, "Status: Inserida", C.ok, C.panel)
+    if okSpace and okUsed then
+      put(ix, self.y + 6, string.format("Uso: %d / %d KB", math.floor(spaceUsed/1024), math.floor(spaceTotal/1024)), C.text, C.panel)
+    end
+    put(ix, self.y + 9, "Endereço: " .. usub(floppyAddr, 1, 16) .. "...", C.dim, C.panel, iw)
+  end
+
+  win.onKey = function(self, char, code)
+    if code == 1 or code == 28 then return true end
     return false
   end
 
@@ -1718,6 +1773,7 @@ local function desktop(cfg)
   local items = {
     { id = "files", label = T.mFiles },
     { id = "editor", label = T.mEditor },
+    { id = "floppy", label = T.mFloppy },
     { id = "calc", label = T.mCalc },
     { id = "monitor", label = T.mMonitor },
     { id = "notes", label = T.mNotes },
@@ -1728,6 +1784,12 @@ local function desktop(cfg)
   }
   local menuOpen, win = false, nil
   local guard
+  local notifText, notifTimer = nil, 0
+
+  local function showNotif(msg)
+    notifText = msg
+    notifTimer = cp.uptime() + 3
+  end
 
   local function render()
     rect(1, 1, w, h - 1, C.bg)
@@ -1736,6 +1798,19 @@ local function desktop(cfg)
     drawLogo(math.floor((w - logoWidth(size)) / 2) + 1, ly, size, C.bg, 0x666666)
     put(math.floor((w - ulen(T.empty)) / 2), ly + size + 1, T.empty, C.dim, C.bg)
     put(math.floor((w - ulen(T.hint)) / 2), ly + size + 2, T.hint, C.dim, C.bg)
+    
+    -- Desenha notificacao de hardware se ativa
+    if notifText and cp.uptime() < notifTimer then
+      local nw = ulen(notifText) + 4
+      local nx = w - nw - 2
+      rect(nx, 2, nw, 3, C.panel)
+      put(nx, 2, "╭" .. string.rep("─", nw - 2) .. "╮", C.ok, C.panel)
+      put(nx, 3, "│ " .. notifText .. " │", C.text, C.panel)
+      put(nx, 4, "╰" .. string.rep("─", nw - 2) .. "╯", C.ok, C.panel)
+    else
+      notifText = nil
+    end
+
     if win then guard(drawWindow, win) end
     drawTaskbar(cfg, menuOpen)
     if menuOpen then drawMenu(items) end
@@ -1763,6 +1838,8 @@ local function desktop(cfg)
       win = guard(filesApp)
     elseif it.id == "editor" then
       win = guard(luaEditorApp)
+    elseif it.id == "floppy" then
+      win = guard(floppyApp)
     elseif it.id == "calc" then
       win = guard(calcApp)
     else
@@ -1777,7 +1854,17 @@ local function desktop(cfg)
   render()
 
   while true do
-    local ev, _, a, b, c = cp.pullSignal(1)
+    local ev, _, a, b, c = cp.pullSignal(0.5)
+    
+    -- Deteccao de novos dispositivos em tempo real
+    if ev == "component_added" then
+      showNotif("Dispositivo: " .. tostring(b))
+      render()
+    elseif ev == "component_removed" then
+      showNotif("Removido: " .. tostring(b))
+      render()
+    end
+
     if ev == "touch" then
       if b == h and a <= ulen(MENU_BTN) then
         menuOpen = not menuOpen
@@ -1828,8 +1915,7 @@ local function desktop(cfg)
         end
       end
     else
-      drawTaskbar(cfg, menuOpen)
-      if win and win.live and not menuOpen then guard(win.body, win) end
+      render()
     end
   end
 end
