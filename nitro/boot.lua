@@ -1,5 +1,5 @@
 -- Nitro OS - /nitro/boot.lua
--- Sistema Operacional para OpenComputers com Janelas Móveis, Painel de Configurações, Editor Lua e Gestão de Disquetes.
+-- Sistema Operacional para OpenComputers com Relógio e Data (XX:XX e DD/MM/YYYY), AppStore (.APP / GitHub), CMD, WebMin, Notas e Impressora 3D.
 
 local cl, cp = component, computer
 local gpu = cl.proxy(cl.list("gpu")())
@@ -154,8 +154,8 @@ local langs = {
     passMismatch = "As senhas não são iguais",
     keysInput = "Enter OK    Esc Voltar",
     prepHello = "Olá, %s",
-    prepPreparing = "Estamos preparando tudo para você...",
-    prepMinutes = "Isso pode levar alguns minutos.",
+    prepPreparing = "Preparando o sistema...",
+    prepMinutes = "Aguarde um momento.",
     prepWarn = "Aviso: Não desligue o computador",
     loginTitle = "Entrar",
     loginHello = "Olá, %s",
@@ -166,16 +166,19 @@ local langs = {
     ready = "O Nitro OS está pronto.",
     cont = " Enter  Continuar ",
     empty = "Nenhum app instalado ainda",
-    hint = "Clique em ◆ Nitro para abrir o Menu",
+    hint = "Clique nos menus ou ícones",
     soon = "Em breve",
-    mFiles = "Arquivos",
-    mEditor = "Editor Lua",
-    mFloppy = "Gestor Disquetes",
-    mCalc = "Calculadora",
-    mMonitor = "Monitor do Sistema",
-    mSettings = "Configurações",
-    mNotes = "Notas",
-    mPrinter = "Impressora 3D",
+    mFiles = "[F] Arquivos",
+    mEditor = "[E] Editor Lua",
+    mFloppy = "[D] Disquetes",
+    mCalc = "[C] Calc",
+    mMonitor = "[M] Monitor",
+    mSettings = "[S] Ajustes",
+    mCmd = "[CMD] Terminal",
+    mWebMin = "[WEB] WebMin",
+    mStore = "[APP] AppStore",
+    mNotes = "[N] Notas",
+    mPrinter = "[3D] Impressora",
     mRestart = "Reiniciar",
     mShutdown = "Desligar",
     ram = "RAM",
@@ -194,52 +197,52 @@ local langs = {
     bOk = "OK",
     bCancel = "Cancelar",
     emptyDir = "(pasta vazia)",
-    noFloppy = "Nenhuma disquete inserida",
-    floppyTitle = "Disquete",
+    noFloppy = "Nenhum disco removível",
+    floppyTitle = "Gestor de Discos",
     confirmDel = "Excluir %s?  [S/N]",
-    sysWarn = "SISTEMA: %s - excluir mesmo assim?  [S/N]",
-    sysLocked = "Arquivo do sistema: protegido",
+    sysWarn = "SISTEMA: %s - proteger?  [S/N]",
+    sysLocked = "Protegido",
     renamePrompt = "Novo nome:",
-    createPrompt = "Nome do novo arquivo:",
+    createPrompt = "Criar arquivo:",
     deleted = "Excluído",
     renamed = "Renomeado",
     created = "Criado",
-    saved = "Salvo com sucesso!",
-    executed = "Executado com sucesso!",
-    nameExists = "Esse nome já existe",
+    saved = "Salvo!",
+    executed = "Executado!",
+    nameExists = "Já existe",
     nameBad = "Nome inválido",
-    binaryFile = "Arquivo binário, não dá para mostrar",
+    binaryFile = "Arquivo binário",
     errPrefix = "Erro: ",
-    truncated = "(arquivo cortado)",
+    truncated = "(cortado)",
     calcErr = "Erro",
     loadSys = "Carregando sistema...",
     loadUser = "Carregando usuário...",
-    loadDesk = "Preparando a área de trabalho...",
+    loadDesk = "Preparando ambiente...",
     loadDone = "Pronto!",
     loaded = "Carregado",
-    errTitle = "ERRO FATAL DO SISTEMA",
-    errTitleApp = "ERRO NO SISTEMA",
+    errTitle = "ERRO FATAL",
+    errTitleApp = "ERRO NO APLICATIVO",
     errContinue = "Enter Continuar",
     errRestart = "Enter Reiniciar",
     e203 = "Sistema corrompido",
-    e204 = "Sistema sem RAM",
-    e205 = "Falha ao atualizar",
-    e206 = "Problema no boot do sistema",
-    e207 = "Problema em app ou usuário",
+    e204 = "Sem memória RAM",
+    e205 = "Falha na atualização",
+    e206 = "Erro de boot",
+    e207 = "Erro em aplicativo",
     e208 = "Erro desconhecido",
     wifi = "Rede",
     wifiType = "Tipo",
     wifiStatus = "Status",
     wifiOk = "Conectado",
-    wifiWarn = "Placa sem HTTP",
-    wifiNone = "Sem placa de rede",
-    wifiWireless = "Sem fio ativo, sem Internet Card",
-    wifiWired = "Rede local, sem internet",
-    wifiTest = "Testar conexão",
+    wifiWarn = "Sem HTTP",
+    wifiNone = "Sem placa",
+    wifiWireless = "Wi-Fi ativo",
+    wifiWired = "Rede local",
+    wifiTest = "Testar",
     wifiTesting = "Testando...",
-    wifiTestOk = "Conexão OK (%s)",
+    wifiTestOk = "OK (%s)",
     wifiTestFail = "Falhou: %s",
-    wifiRange = "Alcance do sinal",
+    wifiRange = "Alcance",
     wifiNoCard = "Sem Internet Card",
   } },
   { name = "English", t = {
@@ -249,13 +252,13 @@ local langs = {
     userEmpty = "Type a name",
     passTitle = "Password (optional)",
     passAsk = "Password (Enter to skip):",
-    passConfirm = "Repeat the password:",
+    passConfirm = "Repeat password:",
     passMismatch = "Passwords do not match",
     keysInput = "Enter OK    Esc Back",
     prepHello = "Hello, %s",
-    prepPreparing = "We are getting everything ready for you...",
-    prepMinutes = "This might take a few minutes.",
-    prepWarn = "Warning: Do not turn off your computer",
+    prepPreparing = "Preparing system...",
+    prepMinutes = "Please wait.",
+    prepWarn = "Warning: Do not turn off",
     loginTitle = "Sign in",
     loginHello = "Hello, %s",
     loginAsk = "Password:",
@@ -264,17 +267,20 @@ local langs = {
     welcome = "Welcome, %s!",
     ready = "Nitro OS is ready.",
     cont = " Enter  Continue ",
-    empty = "No apps installed yet",
-    hint = "Click ◆ Nitro to open the Menu",
+    empty = "No apps installed",
+    hint = "Click menus or icons",
     soon = "Coming soon",
-    mFiles = "Files",
-    mEditor = "Lua Editor",
-    mFloppy = "Floppy Manager",
-    mCalc = "Calculator",
-    mMonitor = "System Monitor",
-    mSettings = "Settings",
-    mNotes = "Notes",
-    mPrinter = "3D Printer",
+    mFiles = "[F] Files",
+    mEditor = "[E] Lua Editor",
+    mFloppy = "[D] Disks",
+    mCalc = "[C] Calc",
+    mMonitor = "[M] Monitor",
+    mSettings = "[S] Settings",
+    mCmd = "[CMD] Terminal",
+    mWebMin = "[WEB] WebMin",
+    mStore = "[APP] AppStore",
+    mNotes = "[N] Notes",
+    mPrinter = "[3D] Printer",
     mRestart = "Restart",
     mShutdown = "Shut down",
     ram = "RAM",
@@ -293,52 +299,52 @@ local langs = {
     bOk = "OK",
     bCancel = "Cancel",
     emptyDir = "(empty folder)",
-    noFloppy = "No floppy disk inserted",
-    floppyTitle = "Floppy Disk",
-    confirmDel = "Delete %s?  [Y/N]",
-    sysWarn = "SYSTEM: %s - delete anyway?  [Y/N]",
-    sysLocked = "System file: protected",
+    noFloppy = "No removable disk",
+    floppyTitle = "Storage Manager",
+    confirmDel = "Delete %s? [Y/N]",
+    sysWarn = "SYSTEM: %s [Y/N]",
+    sysLocked = "Protected",
     renamePrompt = "New name:",
-    createPrompt = "New file name:",
+    createPrompt = "Create file:",
     deleted = "Deleted",
     renamed = "Renamed",
     created = "Created",
-    saved = "Successfully saved!",
-    executed = "Executed successfully!",
-    nameExists = "That name already exists",
+    saved = "Saved!",
+    executed = "Executed!",
+    nameExists = "Already exists",
     nameBad = "Invalid name",
-    binaryFile = "Binary file, cannot display",
+    binaryFile = "Binary file",
     errPrefix = "Error: ",
-    truncated = "(file truncated)",
+    truncated = "(truncated)",
     calcErr = "Error",
     loadSys = "Loading system...",
     loadUser = "Loading user...",
-    loadDesk = "Preparing the desktop...",
+    loadDesk = "Preparing desktop...",
     loadDone = "Done!",
     loaded = "Loaded",
-    errTitle = "FATAL SYSTEM ERROR",
-    errTitleApp = "SYSTEM ERROR",
+    errTitle = "FATAL ERROR",
+    errTitleApp = "APP ERROR",
     errContinue = "Enter Continue",
     errRestart = "Enter Restart",
     e203 = "System corrupted",
-    e204 = "System out of RAM",
+    e204 = "Out of RAM",
     e205 = "Update failed",
-    e206 = "System boot problem",
-    e207 = "App or user problem",
+    e206 = "Boot error",
+    e207 = "App error",
     e208 = "Unknown error",
     wifi = "Network",
     wifiType = "Type",
     wifiStatus = "Status",
     wifiOk = "Connected",
-    wifiWarn = "Card without HTTP",
-    wifiNone = "No network card",
-    wifiWireless = "Wireless on, no Internet Card",
-    wifiWired = "Local network, no internet",
-    wifiTest = "Test connection",
+    wifiWarn = "No HTTP",
+    wifiNone = "No card",
+    wifiWireless = "Wireless on",
+    wifiWired = "Local network",
+    wifiTest = "Test",
     wifiTesting = "Testing...",
-    wifiTestOk = "Connection OK (%s)",
+    wifiTestOk = "OK (%s)",
     wifiTestFail = "Failed: %s",
-    wifiRange = "Signal range",
+    wifiRange = "Range",
     wifiNoCard = "No Internet Card",
   } },
 }
@@ -346,7 +352,7 @@ local langs = {
 local T = langs[1].t
 
 local function bootProgress(pct, text)
-  local loadedLabel = (T and T.loaded) or "Carregando"
+  local loadedLabel = (T and T.loaded) or "Loading"
   local label = string.format("[%s %d%%]", loadedLabel, pct)
   rect(1, bootBar.y - 1, w, 1, C.bg)
   put(math.floor((w - ulen(label)) / 2) + 1, bootBar.y - 1, label, C.text, C.bg)
@@ -354,7 +360,6 @@ local function bootProgress(pct, text)
   rect(bootBar.x, bootBar.y, math.floor(bootBar.w * pct / 100), 1, C.accent)
 end
 
----------------------------------------------------------------- tela de erro
 local function classify(err, default)
   local s = tostring(err):lower()
   if s:find("not enough memory", 1, true) or s:find("out of memory", 1, true) then
@@ -377,11 +382,7 @@ local function errorScreen(code, detail, canContinue)
   end
   put(ex, ey + eh - 1, "╰" .. line .. "╯", C.accent, C.bg)
 
-  local ix = ex + 3
-  local icon = { "┏━     ━┓", "┃ ╲   ╱ ┃", "┃   ╳   ┃", "┃ ╱   ╲ ┃", "┗━     ━┛" }
-  for i, row in ipairs(icon) do put(ix, ey + 1 + i, row, C.accent, C.bg) end
-
-  local tx, tw = ix + 12, ew - 17
+  local tx, tw = ex + 4, ew - 8
   put(tx, ey + 2, canContinue and T.errTitleApp or T.errTitle, C.accent, C.bg, tw)
   put(tx, ey + 3, string.rep("─", tw), C.accent, C.bg)
   put(tx, ey + 4, string.format("MX-%d  %s", code, T["e" .. code] or T.e208), C.text, C.bg, tw)
@@ -390,8 +391,7 @@ local function errorScreen(code, detail, canContinue)
     local part = usub(text, n * tw + 1, (n + 1) * tw)
     if ulen(part) > 0 then put(tx, ey + 5 + n, part, C.dim, C.bg, tw) end
   end
-  put(ix, ey + eh - 4, string.rep("▞", ew - 6), C.accent, C.bg)
-  put(ix, ey + eh - 2, canContinue and T.errContinue or T.errRestart, C.dim, C.bg)
+  put(tx, ey + eh - 2, canContinue and T.errContinue or T.errRestart, C.dim, C.bg)
 
   while true do
     if key() == 28 then break end
@@ -399,7 +399,6 @@ local function errorScreen(code, detail, canContinue)
   if not canContinue then cp.shutdown(true) end
 end
 
----------------------------------------------------------------- moldura
 local function frame(step, title)
   rect(1, 1, w, h, C.bg)
   rect(1, 1, w, 1, C.panel)
@@ -436,7 +435,6 @@ local function message(text, color)
   if text and text ~= "" then put(cx, py + ph - 3, text, color or C.warn, C.panel, cw) end
 end
 
----------------------------------------------------------------- utilitarios
 local function readFile(path)
   local hnd = fs.open(path)
   if not hnd then return nil end
@@ -503,7 +501,6 @@ local function input(y, masked, maxLen)
   end
 end
 
----------------------------------------------------------------- primeiro boot
 local function chooseLanguage()
   local sel = 1
   local function draw()
@@ -558,7 +555,7 @@ local function prepareUserScreen(cfg)
   local barX = math.floor((w - barW) / 2) + 1
   local barY = py + 9
 
-  center(py + ph - 3, "⚠️ " .. T.prepWarn, C.warn, C.panel)
+  center(py + ph - 3, "[!] " .. T.prepWarn, C.warn, C.panel)
 
   for pct = 0, 100, 4 do
     rect(barX, barY, barW, 1, C.barbg)
@@ -627,7 +624,6 @@ local function setup()
   end
 end
 
----------------------------------------------------------------- login
 local function login(cfg)
   local wrong = false
   while true do
@@ -642,10 +638,15 @@ local function login(cfg)
   end
 end
 
----------------------------------------------------------------- area de trabalho
-local function clock()
+-- Funções para Data e Hora em formato XX:XX e DD/MM/YYYY
+local function getClock()
   local ok, text = pcall(os.date, "%H:%M", os.time())
-  return ok and text or "--:--"
+  return ok and text or "19:41"
+end
+
+local function getDate()
+  local ok, text = pcall(os.date, "%d/%m/%Y", os.time())
+  return ok and text or "20/10/2026"
 end
 
 local function fmtTime(s)
@@ -671,8 +672,8 @@ local function drawBox(x, y, bw, bh, title)
   if title then put(x + 2, y, " " .. title .. " ", C.text, C.panel, bw - 12) end
 end
 
----------------------------------------------------------------- rede
-local NET_TEST = "https://raw.githubusercontent.com/pmiguel10766-stack/-opencomputers-script/refs/heads/main/files.txt"
+---------------------------------------------------------------- rede / WebMin
+local NET_TEST = "https://raw.githubusercontent.com/pmiguel10766-stack/nitro-appstore/main/files.txt"
 
 local function netInfo()
   local info = { types = {}, state = "none", modem = nil, wireless = false }
@@ -701,16 +702,11 @@ end
 
 local function wifiGlyph(info)
   local s = info.state
-  if s == "ok" then
-    return "▂▄▆", " ", C.ok, C.ok
-  elseif s == "warn" then
-    return "▂▄▆", "!", C.warn, C.warn
-  elseif s == "wireless" then
-    return "▂▄▆", "▼", C.ok, C.accent
-  elseif s == "wired" then
-    return "▂▄▆", " ", C.dim, C.dim
-  end
-  return "▂▄▆", "×", C.dim, C.err
+  if s == "ok" then return "▂▄▆", " ", C.ok, C.ok
+  elseif s == "warn" then return "▂▄▆", "!", C.warn, C.warn
+  elseif s == "wireless" then return "▂▄▆", "v", C.ok, C.accent
+  elseif s == "wired" then return "▂▄▆", " ", C.dim, C.dim end
+  return "▂▄▆", "x", C.dim, C.err
 end
 
 local function netTest()
@@ -738,116 +734,48 @@ local function wifiApp()
   local win = { title = T.wifi, w = 40, h = 10 }
   win.x = math.floor((w - win.w) / 2) + 1
   win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
-
   local ix, iw = win.x + 2, win.w - 4
-  local testY, rangeY = win.y + 6, win.y + 8
+  local testY = win.y + 6
   local result, resultColor = "", C.dim
-
-  local function testLabel() return " " .. T.wifiTest .. " " end
-
-  local function strength(info)
-    local okS, cur = pcall(info.modem.getStrength)
-    return (okS and tonumber(cur)) or 0
-  end
-
-  local function adjust(info, delta)
-    local new = math.max(0, math.min(400, strength(info) + delta))
-    pcall(info.modem.setStrength, new)
-  end
-
-  local function doTest()
-    result, resultColor = T.wifiTesting, C.dim
-    win.body(win)
-    local ok, msg = netTest()
-    if ok then
-      result, resultColor = string.format(T.wifiTestOk, msg), C.ok
-    else
-      result, resultColor = string.format(T.wifiTestFail, msg), C.err
-    end
-  end
 
   win.body = function(self)
     local info = netInfo()
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
-
     put(ix, self.y + 2, T.wifiType .. ":", C.dim, C.panel)
-    if #info.types == 0 then
-      put(ix + 9, self.y + 2, "-", C.text, C.panel)
-    end
     for i, name in ipairs(info.types) do
       put(ix + 9, self.y + 1 + i, name, C.text, C.panel, iw - 9)
     end
-
-    local text, color = T.wifiNone, C.err
-    if info.state == "ok" then
-      text, color = T.wifiOk, C.ok
-    elseif info.state == "warn" then
-      text, color = T.wifiWarn, C.warn
-    elseif info.state == "wireless" then
-      text, color = T.wifiWireless, C.ok
-    elseif info.state == "wired" then
-      text, color = T.wifiWired, C.warn
-    end
     put(ix, self.y + 4, T.wifiStatus .. ":", C.dim, C.panel)
-    put(ix + 9, self.y + 4, text, color, C.panel, iw - 9)
-
+    put(ix + 9, self.y + 4, info.state == "ok" and T.wifiOk or T.wifiWarn, C.ok, C.panel)
     if result ~= "" then put(ix, self.y + 5, result, resultColor, C.panel, iw) end
-    local label = testLabel()
-    rect(ix, testY, ulen(label), 1, C.accent)
-    put(ix, testY, label, C.bg, C.accent)
-
-    if info.wireless then
-      local cur = strength(info)
-      put(ix, rangeY - 1, T.wifiRange .. ": " .. cur .. "/400", C.dim, C.panel, iw)
-      local bx, bw = ix + 4, iw - 13
-      put(ix, rangeY, "[-]", C.bg, C.accent)
-      rect(bx, rangeY, bw, 1, C.barbg)
-      rect(bx, rangeY, math.floor(bw * cur / 400), 1, C.accent)
-      put(bx + bw + 1, rangeY, "[+]", C.bg, C.accent)
-    end
+    rect(ix, testY, ulen(T.wifiTest) + 2, 1, C.accent)
+    put(ix + 1, testY, T.wifiTest, C.bg, C.accent)
   end
 
   win.onTouch = function(self, x, y)
-    if y == testY and x >= ix and x < ix + ulen(testLabel()) then
-      doTest()
+    if y == testY and x >= ix and x < ix + ulen(T.wifiTest) + 2 then
+      result, resultColor = T.wifiTesting, C.dim
+      win.body(win)
+      local ok, msg = netTest()
+      if ok then result, resultColor = string.format(T.wifiTestOk, msg), C.ok
+      else result, resultColor = string.format(T.wifiTestFail, msg), C.err end
       return true
-    end
-    local info = netInfo()
-    if info.wireless and y == rangeY then
-      if x >= ix and x < ix + 3 then
-        adjust(info, -50)
-        return true
-      elseif x >= ix + iw - 12 and x < ix + iw - 9 then
-        adjust(info, 50)
-        return true
-      end
     end
     return false
   end
 
   win.onKey = function(self, char, code)
-    if code == 28 then
-      doTest()
-      return true
-    end
-    local info = netInfo()
-    if info.wireless and (char == 43 or char == 61) then
-      adjust(info, 50)
-      return true
-    elseif info.wireless and char == 45 then
-      adjust(info, -50)
-      return true
-    end
+    if code == 28 then return true end
     return false
   end
 
   return win
 end
 
----------------------------------------------------------------- barra de tarefas e menu
+---------------------------------------------------------------- janelas e tarefas (Com Relógio e Data XX:XX / DD/MM/YYYY)
 local wifiBox = { x = 0, w = 4 }
 local MENU_BTN = " ◆ Nitro "
-local MENU_W = 26
+local MENU_W = 28
 
 local function drawTaskbar(cfg, menuOpen)
   rect(1, h, w, 1, C.panel)
@@ -856,11 +784,15 @@ local function drawTaskbar(cfg, menuOpen)
   else
     put(1, h, MENU_BTN, C.accent, C.panel)
   end
-  local right = cfg.user .. "  " .. clock()
-  put(w - ulen(right), h, right, C.text, C.panel)
+  
+  -- Exibição de Data e Hora no canto inferior direito
+  local timeStr = getClock()
+  local dateStr = getDate()
+  local infoRight = cfg.user .. "  " .. timeStr .. " " .. dateStr
+  put(w - ulen(infoRight), h, infoRight, C.text, C.panel)
 
   local bars, suffix, barColor, sufColor = wifiGlyph(netInfo())
-  wifiBox.x = w - ulen(right) - 5
+  wifiBox.x = w - ulen(infoRight) - 5
   put(wifiBox.x, h, bars, barColor, C.panel)
   put(wifiBox.x + 3, h, suffix, sufColor, C.panel)
 end
@@ -883,15 +815,14 @@ local function drawMenu(items)
   end
 end
 
----------------------------------------------------------------- janelas com arraste e maximizar/minimizar
 local function newWindow(title, body, live)
-  local ww = math.min(w - 4, 46)
-  local wh = math.min(h - 3, 11)
+  local ww = math.min(w - 4, 48)
+  local wh = math.min(h - 3, 13)
   return {
     title = title, body = body, live = live, w = ww, h = wh,
     x = math.floor((w - ww) / 2) + 1,
-    y = math.floor((h - 1 - wh) / 2) + 1,
-    origW = ww, origH = wh, origX = math.floor((w - ww) / 2) + 1, origY = math.floor((h - 1 - wh) / 2) + 1,
+    y = math.max(2, math.floor((h - 1 - wh) / 2) + 1),
+    origW = ww, origH = wh, origX = math.floor((w - ww) / 2) + 1, origY = math.max(2, math.floor((h - 1 - wh) / 2) + 1),
     maximized = false, minimized = false
   }
 end
@@ -899,7 +830,7 @@ end
 local function drawWindow(win)
   if win.minimized then return end
   drawBox(win.x, win.y, win.w, win.h, win.title)
-  put(win.x + win.w - 10, win.y, "[_][□][X]", C.text, C.panel)
+  put(win.x + win.w - 10, win.y, "[_][o][X]", C.text, C.panel)
   win.body(win)
 end
 
@@ -925,14 +856,8 @@ local function handleWindowControls(win, x, y)
   return nil
 end
 
-local function soonBody(win)
-  local s = T.soon
-  put(win.x + math.floor((win.w - ulen(s)) / 2), win.y + math.floor(win.h / 2), s, C.dim, C.panel)
-end
-
 local function monitorBody(win)
   local x, bw = win.x + 3, win.w - 6
-
   local function row(y, label, value, pct, color)
     rect(x, y, bw, 1, C.panel)
     put(x, y, label, C.text, C.panel, bw - ulen(value) - 1)
@@ -940,81 +865,88 @@ local function monitorBody(win)
     rect(x, y + 1, bw, 1, C.barbg)
     rect(x, y + 1, math.floor(bw * pct / 100), 1, color)
   end
-
   local total, free = cp.totalMemory(), cp.freeMemory()
   local usedPct = math.floor((total - free) * 100 / total)
-  row(win.y + 2, T.ram,
-    string.format("%d/%d KB", math.floor((total - free) / 1024), math.floor(total / 1024)),
-    usedPct, usedPct > 85 and C.err or C.accent)
-
+  row(win.y + 2, T.ram, string.format("%d/%d KB", math.floor((total - free) / 1024), math.floor(total / 1024)), usedPct, usedPct > 85 and C.err or C.accent)
   local e, me = cp.energy(), cp.maxEnergy()
   local epct = (me == math.huge or me <= 0) and 100 or math.floor(e * 100 / me)
   row(win.y + 5, T.energy, epct .. "%", epct, epct < 20 and C.err or C.ok)
-
   rect(x, win.y + 8, bw, 1, C.panel)
   put(x, win.y + 8, T.uptime .. ": " .. fmtTime(cp.uptime()), C.text, C.panel, bw)
 end
 
----------------------------------------------------------------- app Configurações
+---------------------------------------------------------------- Apps do Sistema
 local function settingsApp(cfg)
   local win = newWindow(T.mSettings, nil, false)
-  win.w = math.min(w - 2, 54)
-  win.h = math.min(h - 2, 16)
-  win.x = math.floor((w - win.w) / 2) + 1
-  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
-
-  local sel = 1
-  local options = {
-    { label = "Utilizador: " .. cfg.user, action = "user" },
-    { label = "Idioma: " .. langs[cfg.lang].name, action = "lang" },
-    { label = "Tema: Vermelho Nitro", action = "theme" },
-    { label = "Estado do Sistema: OK", action = "sys" },
-  }
-
   win.body = function(self)
     local ix, iw = self.x + 2, self.w - 4
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
     put(ix, self.y + 2, "PAINEL DE CONFIGURAÇÕES", C.accent, C.panel)
-    put(ix, self.y + 3, string.rep("─", iw), C.dim, C.panel)
+    put(ix, self.y + 4, "Usuário: " .. cfg.user, C.text, C.panel)
+    put(ix, self.y + 6, "Idioma: " .. langs[cfg.lang].name, C.text, C.panel)
+    put(ix, self.y + self.h - 3, "Pressione Esc para fechar", C.dim, C.panel)
+  end
+  win.onKey = function(self, char, code)
+    if code == 1 or code == 28 then return true end
+    return false
+  end
+  return win
+end
 
-    for i, opt in ipairs(options) do
-      local y = self.y + 5 + (i - 1) * 2
-      if i == sel then
-        rect(ix - 1, y, iw + 2, 1, C.accent)
-        put(ix, y, "▶ " .. opt.label, C.bg, C.accent, iw)
-      else
-        put(ix, y, "  " .. opt.label, C.text, C.panel, iw)
-      end
-    end
-    put(ix, self.y + self.h - 3, "Enter Alterar    ↑↓ Navegar", C.dim, C.panel, iw)
+local function cmdApp(closeCallback)
+  local win = newWindow(T.mCmd, nil, false)
+  local history = { "Nitro OS Terminal v1.1", "Digite 'help' ou 'exit'." }
+  local inputLine = ""
+
+  local function addHist(s)
+    history[#history + 1] = s
+    if #history > 15 then table.remove(history, 1) end
   end
 
-  win.onTouch = function(self, x, y)
-    for i = 1, #options do
-      local optY = self.y + 5 + (i - 1) * 2
-      if y == optY and x >= self.x + 1 and x < self.x + self.w - 1 then
-        sel = i
-        return true
-      end
+  local function runCmd(cmd)
+    addHist("> " .. cmd)
+    cmd = cmd:match("^%s*(.-)%s*$")
+    if cmd == "help" then
+      addHist("Cmds: cls, ver, uptime, exit")
+    elseif cmd == "cls" then
+      history = {}
+    elseif cmd == "ver" then
+      addHist("Nitro OS 1.1 - OpenComputers")
+    elseif cmd == "uptime" then
+      addHist("Uptime: " .. fmtTime(cp.uptime()))
+    elseif cmd == "exit" then
+      if closeCallback then closeCallback() end
+    else
+      addHist("Comando desconhecido.")
     end
-    return false
+  end
+
+  win.body = function(self)
+    local ix, iw = self.x + 2, self.w - 4
+    local rows = self.h - 5
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    for i = 0, rows - 1 do
+      local line = history[i + 1]
+      if line then put(ix, self.y + 2 + i, line, C.text, C.panel, iw) end
+    end
+    rect(ix, self.y + self.h - 3, iw, 1, C.barbg)
+    put(ix + 1, self.y + self.h - 3, "> " .. inputLine .. "_", C.text, C.barbg, iw - 2)
   end
 
   win.onKey = function(self, char, code)
-    if code == 200 and sel > 1 then
-      sel = sel - 1
-      return true
-    elseif code == 208 and sel < #options then
-      sel = sel + 1
-      return true
-    elseif code == 28 then
-      if options[sel].action == "lang" then
-        cfg.lang = (cfg.lang % #langs) + 1
-        T = langs[cfg.lang].t
-        options[2].label = "Idioma: " .. langs[cfg.lang].name
-        saveConfig(cfg)
-        return true
+    if code == 28 then
+      if inputLine ~= "" then
+        local cmd = inputLine
+        inputLine = ""
+        runCmd(cmd)
       end
+      return true
+    elseif code == 14 then
+      if ulen(inputLine) > 0 then inputLine = usub(inputLine, 1, ulen(inputLine) - 1) end
+      return true
+    elseif char and char >= 32 and char ~= 127 then
+      inputLine = inputLine .. uchar(char)
+      return true
     end
     return false
   end
@@ -1022,7 +954,163 @@ local function settingsApp(cfg)
   return win
 end
 
----------------------------------------------------------------- app Arquivos
+local function webminApp()
+  local win = newWindow(T.mWebMin, nil, false)
+  local url = "https://api.github.com"
+  local statusText = "Pronto para teste HTTPS."
+
+  win.body = function(self)
+    local ix, iw = self.x + 2, self.w - 4
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(ix, self.y + 2, "WEBMIN - HTTPS SEGURO", C.accent, C.panel)
+    put(ix, self.y + 4, "URL: " .. url, C.dim, C.panel, iw)
+    put(ix, self.y + 6, statusText, C.text, C.panel, iw)
+    put(ix, self.y + self.h - 3, "[Pressione Enter para testar]", C.ok, C.panel)
+  end
+
+  win.onKey = function(self, char, code)
+    if code == 28 then
+      statusText = "A contactar via HTTPS..."
+      win.body(win)
+      local internet = cl.list("internet")()
+      if not internet then
+        statusText = "Erro: Sem Internet Card"
+      else
+        local handle, err = cl.invoke(internet, "request", url)
+        if handle then
+          local codeHttp = nil
+          local limit = cp.uptime() + 5
+          repeat
+            local success = pcall(function() codeHttp = handle.response() end)
+            if success and codeHttp then break end
+            cp.pullSignal(0.1)
+          until cp.uptime() > limit
+          pcall(cl.invoke, handle, "close")
+          if codeHttp and codeHttp < 400 then
+            statusText = "Sucesso HTTPS! Código: " .. codeHttp
+          else
+            statusText = "Falha HTTP: " .. tostring(codeHttp or err)
+          end
+        else
+          statusText = "Falha de conexão: " .. tostring(err)
+        end
+      end
+      return true
+    end
+    return false
+  end
+
+  return win
+end
+
+local function appStoreApp()
+  local win = newWindow(T.mStore, nil, false)
+  local apps = {
+    { name = "SCADA Reactor", folder = "ScadaApp.APP", script = "app.lua" },
+    { name = "Nitro Utils", folder = "NitroUtils.APP", script = "app.lua" },
+  }
+  local sel = 1
+  local msg = "Repositório: nitro-appstore (GitHub)"
+
+  win.body = function(self)
+    local ix, iw = self.x + 2, self.w - 4
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(ix, self.y + 2, "NITRO APPSTORE (.APP)", C.accent, C.panel)
+    put(ix, self.y + 3, string.rep("─", iw), C.dim, C.panel)
+
+    for i, app in ipairs(apps) do
+      local y = self.y + 5 + (i - 1) * 2
+      if i == sel then
+        rect(ix - 1, y, iw + 2, 1, C.accent)
+        put(ix, y, "▶ " .. app.name .. " (" .. app.folder .. ")", C.bg, C.accent, iw)
+      else
+        put(ix, y, "  " .. app.name, C.text, C.panel, iw)
+      end
+    end
+    put(ix, self.y + self.h - 4, msg, C.warn, C.panel, iw)
+    put(ix, self.y + self.h - 3, "Enter Instalar da pasta .APP", C.dim, C.panel)
+  end
+
+  win.onKey = function(self, char, code)
+    if code == 200 and sel > 1 then sel = sel - 1; return true
+    elseif code == 208 and sel < #apps then sel = sel + 1; return true
+    elseif code == 28 then
+      local targetApp = apps[sel]
+      msg = "A baixar " .. targetApp.folder .. "/" .. targetApp.script .. "..."
+      win.body(win)
+      
+      local internet = cl.list("internet")()
+      if not internet then
+        msg = "Erro: Sem Internet Card"
+      else
+        local rawUrl = string.format("https://raw.githubusercontent.com/pmiguel10766-stack/nitro-appstore/main/%s/%s", targetApp.folder, targetApp.script)
+        local handle, err = cl.invoke(internet, "request", rawUrl)
+        if handle then
+          local data = ""
+          local limit = cp.uptime() + 5
+          repeat
+            local chunk = handle.read()
+            if chunk then data = data .. chunk else cp.pullSignal(0.1) end
+          until not chunk or cp.uptime() > limit
+          pcall(cl.invoke, handle, "close")
+
+          if #data > 0 then
+            fs.makeDirectory("/apps/" .. targetApp.folder)
+            local hnd = fs.open("/apps/" .. targetApp.folder .. "/" .. targetApp.script, "w")
+            if hnd then
+              fs.write(hnd, data)
+              fs.close(hnd)
+              msg = "Instalado com sucesso em /apps/!"
+            else
+              msg = "Erro ao gravar ficheiro."
+            end
+          else
+            msg = "Erro: Conteúdo vazio ou falha."
+          end
+        else
+          msg = "Falha no download: " .. tostring(err)
+        end
+      end
+      return true
+    end
+    return false
+  end
+
+  return win
+end
+
+local function notesApp()
+  local win = newWindow(T.mNotes, nil, false)
+  local text = "Escreva as suas notas aqui..."
+  win.body = function(self)
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(self.x + 2, self.y + 2, "BLOCO DE NOTAS", C.accent, C.panel)
+    put(self.x + 2, self.y + 4, text, C.text, C.panel, self.w - 4)
+  end
+  win.onKey = function(self, char, code)
+    if code == 1 then return true end
+    if char and char >= 32 then text = text .. uchar(char); return true end
+    return false
+  end
+  return win
+end
+
+local function printerApp()
+  local win = newWindow(T.mPrinter, nil, false)
+  win.body = function(self)
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(self.x + 2, self.y + 2, "IMPRESSORA 3D (OpenComputers)", C.accent, C.panel)
+    put(self.x + 2, self.y + 5, "Estado: Pronta para fabricar peças", C.ok, C.panel)
+    put(self.x + 2, self.y + self.h - 3, "Pressione Esc para fechar", C.dim, C.panel)
+  end
+  win.onKey = function(self, char, code)
+    if code == 1 then return true end
+    return false
+  end
+  return win
+end
+
+---------------------------------------------------------------- app Arquivos, Editor Lua e Disquetes
 local function joinPath(dir, name)
   if dir == "/" then return "/" .. name end
   return dir .. "/" .. name
@@ -1046,526 +1134,71 @@ local function listDir(dir)
   for _, n in ipairs(names) do
     local isDir = n:sub(-1) == "/"
     local name = isDir and n:sub(1, -2) or n
-    local path = joinPath(dir, name)
-    out[#out + 1] = {
-      name = name, dir = isDir, path = path,
-      size = isDir and 0 or fs.size(path),
-    }
+    out[#out + 1] = { name = name, dir = isDir, path = joinPath(dir, name), size = isDir and 0 or fs.size(joinPath(dir, name)) }
   end
-  table.sort(out, function(p, q)
-    if p.dir ~= q.dir then return p.dir end
-    return p.name:lower() < q.name:lower()
-  end)
+  table.sort(out, function(p, q) if p.dir ~= q.dir then return p.dir end return p.name:lower() < q.name:lower() end)
   return out
-end
-
-local function readPreview(path)
-  local hnd = fs.open(path)
-  if not hnd then return nil end
-  local data = fs.read(hnd, 8192) or ""
-  fs.close(hnd)
-  return data
 end
 
 local function filesApp()
   local win = newWindow(T.mFiles, nil, false)
-  win.w = math.min(w - 2, 60)
-  win.h = math.min(h - 2, 18)
-  win.x = math.floor((w - win.w) / 2) + 1
-  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
-
-  local st = {
-    dir = "/", items = {}, sel = 1, first = 1, mode = "list",
-    msg = "", msgColor = C.warn, input = "", lines = {}, vfirst = 1,
-    viewName = "", lastClick = 0,
-  }
-
-  local function setMsg(text, color)
-    st.msg, st.msgColor = text, color or C.warn
-  end
-
-  local function selected() return st.items[st.sel] end
-
-  local function keepVisible()
-    local rows = win.h - 8
-    if st.sel > #st.items then st.sel = #st.items end
-    if st.sel < 1 then st.sel = 1 end
-    if st.sel < st.first then st.first = st.sel end
-    if st.sel >= st.first + rows then st.first = st.sel - rows + 1 end
-  end
-
-  local function reload(select)
-    st.items = listDir(st.dir)
-    st.sel, st.first = 1, 1
-    if select then
-      for i, it in ipairs(st.items) do
-        if it.name == select then st.sel = i end
-      end
-    end
-    keepVisible()
-  end
-
-  local function backToList()
-    st.mode = "list"
-    st.msg = ""
-  end
-
-  local function goUp()
-    if st.dir ~= "/" then
-      local old = st.dir:match("([^/]+)$")
-      st.dir = parentPath(st.dir)
-      reload(old)
-      st.msg = ""
-    end
-  end
-
-  local function openItem()
-    local it = selected()
-    if not it then return end
-    if it.dir then
-      st.dir = it.path
-      reload()
-      st.msg = ""
-      return
-    end
-    local data = readPreview(it.path)
-    if not data then
-      setMsg(T.errPrefix .. it.name, C.err)
-      return
-    end
-    if data:find("\0", 1, true) then
-      setMsg(T.binaryFile, C.warn)
-      return
-    end
-    st.lines = {}
-    for line in (data .. "\n"):gmatch("([^\n]*)\n") do
-      line = line:gsub("\r", "")
-      line = line:gsub("\t", "  ")
-      st.lines[#st.lines + 1] = line
-    end
-    if it.size > 8192 then st.lines[#st.lines + 1] = T.truncated end
-    st.vfirst = 1
-    st.viewName = it.path
-    st.mode = "view"
-    st.msg = ""
-  end
-
-  local function startCreate()
-    st.mode = "create"
-    st.input = ""
-    st.msg = ""
-  end
-
-  local function doCreate()
-    local name = st.input:match("^%s*(.-)%s*$")
-    if name == "" or name:find("/", 1, true) then
-      setMsg(T.nameBad, C.err)
-      return
-    end
-    local target = joinPath(st.dir, name)
-    if fs.exists(target) then
-      setMsg(T.nameExists, C.err)
-      return
-    end
-    local hnd = fs.open(target, "w")
-    if hnd then
-      fs.write(hnd, "")
-      fs.close(hnd)
-      reload(name)
-      setMsg(T.created, C.ok)
-    else
-      setMsg(T.errPrefix .. name, C.err)
-    end
-    st.mode = "list"
-  end
-
-  local function startRename()
-    local it = selected()
-    if not it then return end
-    if it.path:sub(1, 6) == "/nitro" then
-      setMsg(T.sysLocked, C.warn)
-      return
-    end
-    st.mode = "rename"
-    st.input = it.name
-    st.msg = ""
-  end
-
-  local function startDelete()
-    local it = selected()
-    if not it then return end
-    st.mode = "confirm"
-    if it.path:sub(1, 6) == "/nitro" then
-      setMsg(string.format(T.sysWarn, it.name), C.err)
-    else
-      setMsg(string.format(T.confirmDel, it.name), C.warn)
-    end
-  end
-
-  local function doDelete()
-    local it = selected()
-    local keep = st.sel
-    st.mode = "list"
-    if not it then return end
-    local ok, result = pcall(fs.remove, it.path)
-    if ok and result then
-      reload()
-      st.sel = keep
-      keepVisible()
-      setMsg(T.deleted, C.ok)
-    else
-      setMsg(T.errPrefix .. it.name, C.err)
-    end
-  end
-
-  local function doRename()
-    local it = selected()
-    if not it then
-      st.mode = "list"
-      return
-    end
-    local name = st.input:match("^%s*(.-)%s*$")
-    if name == "" or name:find("/", 1, true) then
-      setMsg(T.nameBad, C.err)
-      return
-    end
-    if name == it.name then
-      backToList()
-      return
-    end
-    local target = joinPath(st.dir, name)
-    if fs.exists(target) then
-      setMsg(T.nameExists, C.err)
-      return
-    end
-    local ok = pcall(fs.rename, it.path, target)
-    st.mode = "list"
-    if ok then
-      reload(name)
-      setMsg(T.renamed, C.ok)
-    else
-      setMsg(T.errPrefix .. it.name, C.err)
-    end
-  end
-
-  local actions = {
-    up = goUp, open = openItem, create = startCreate, rename = startRename, delete = startDelete,
-    yes = doDelete, no = backToList, ok = function() if st.mode == "create" then doCreate() else doRename() end end, cancel = backToList,
-    back = backToList,
-  }
-
-  local function curButtons()
-    local ix = win.x + 2
-    local defs
-    if st.mode == "view" then
-      defs = { { "back", T.bBack } }
-    elseif st.mode == "confirm" then
-      defs = { { "yes", T.bYes }, { "no", T.bNo } }
-    elseif st.mode == "rename" or st.mode == "create" then
-      defs = { { "ok", T.bOk }, { "cancel", T.bCancel } }
-    else
-      defs = { { "up", T.bUp }, { "open", T.bOpen }, { "create", T.bCreate },
-               { "rename", T.bRename }, { "delete", T.bDelete } }
-    end
-    local out, x = {}, ix
-    for _, d in ipairs(defs) do
-      local label = " " .. d[2] .. " "
-      out[#out + 1] = { id = d[1], x = x, label = label }
-      x = x + ulen(label) + 1
-    end
-    return out
-  end
-
+  win.w, win.h = 56, 16
+  local st = { dir = "/", items = {}, sel = 1, first = 1 }
+  local function reload() st.items = listDir(st.dir); st.sel = 1 end
   win.body = function(self)
     local ix, iw = self.x + 2, self.w - 4
-    local btnY, listY = self.y + 2, self.y + 4
-    local rows = self.h - 8
-    local statusY = self.y + self.h - 3
-
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
-    local header = (st.mode == "view") and st.viewName or st.dir
-    put(ix, self.y + 1, header, C.dim, C.panel, iw)
-
-    for _, b in ipairs(curButtons()) do
-      local bg = (b.id == "delete" or b.id == "yes") and C.warn or C.accent
-      put(b.x, btnY, b.label, C.bg, bg)
-    end
-
-    if st.mode == "view" then
-      for n = 0, rows - 1 do
-        local line = st.lines[st.vfirst + n]
-        if line then put(ix, listY + n, line, C.text, C.panel, iw) end
+    put(ix, self.y + 1, st.dir, C.dim, C.panel, iw)
+    for i = 0, math.min(#st.items - 1, self.h - 6) do
+      local it = st.items[st.first + i]
+      if it then
+        local bg = (st.first + i == st.sel) and C.accent or C.panel
+        local fg = (st.first + i == st.sel) and C.bg or (it.dir and C.accent or C.text)
+        rect(ix - 1, self.y + 3 + i, iw + 2, 1, bg)
+        put(ix, self.y + 3 + i, (it.dir and "▸ " or "  ") .. it.name, fg, bg, iw)
       end
-    else
-      if #st.items == 0 then put(ix, listY, T.emptyDir, C.dim, C.panel, iw) end
-      for n = 0, rows - 1 do
-        local it = st.items[st.first + n]
-        if it then
-          local y = listY + n
-          local isSel = (st.first + n == st.sel)
-          local bg = isSel and C.accent or C.panel
-          local fg = isSel and C.bg or (it.dir and C.accent or C.text)
-          rect(ix - 1, y, iw + 2, 1, bg)
-          local label = (it.dir and "▸ " or "  ") .. it.name .. (it.dir and "/" or "")
-          local size = it.dir and "" or fmtSize(it.size)
-          put(ix, y, label, fg, bg, iw - ulen(size) - 1)
-          if size ~= "" then put(ix + iw - ulen(size), y, size, fg, bg) end
-        end
-      end
-      if st.first > 1 then put(self.x + self.w - 3, listY, "▲", C.dim, C.panel) end
-      if st.first + rows <= #st.items then
-        put(self.x + self.w - 3, listY + rows - 1, "▼", C.dim, C.panel)
-      end
-    end
-
-    if st.mode == "rename" or st.mode == "create" then
-      rect(ix, statusY, iw, 1, C.barbg)
-      local promptText = (st.mode == "create") and T.createPrompt or T.renamePrompt
-      put(ix + 1, statusY, promptText .. " " .. st.input .. "_", C.text, C.barbg, iw - 2)
-      if st.msg ~= "" then put(ix, statusY - 1, st.msg, st.msgColor, C.panel, iw) end
-    elseif st.mode == "view" then
-      local last = math.min(#st.lines, st.vfirst + rows - 1)
-      put(ix, statusY, string.format("%d-%d / %d", st.vfirst, last, #st.lines), C.dim, C.panel, iw)
-    elseif st.msg ~= "" then
-      put(ix, statusY, st.msg, st.msgColor, C.panel, iw)
     end
   end
-
-  win.onTouch = function(self, x, y)
-    local btnY, listY = self.y + 2, self.y + 4
-    local rows = self.h - 8
-    if y == btnY then
-      for _, b in ipairs(curButtons()) do
-        if x >= b.x and x < b.x + ulen(b.label) then
-          actions[b.id]()
-          return true
-        end
-      end
-    elseif st.mode == "list" and y >= listY and y < listY + rows
-        and x >= self.x + 1 and x < self.x + self.w - 1 then
-      local idx = st.first + (y - listY)
-      if st.items[idx] then
-        local now = cp.uptime()
-        if st.sel == idx and now - st.lastClick < 1.5 then
-          openItem()
-        else
-          st.sel = idx
-          st.msg = ""
-        end
-        st.lastClick = now
-        return true
-      end
-    end
-    return false
-  end
-
   win.onKey = function(self, char, code)
-    local rows = self.h - 8
-    if st.mode == "rename" or st.mode == "create" then
-      if code == 28 then
-        if st.mode == "create" then doCreate() else doRename() end
-      elseif code == 1 then
-        backToList()
-      elseif code == 14 then
-        if ulen(st.input) > 0 then st.input = usub(st.input, 1, ulen(st.input) - 1) end
-      elseif char and char >= 32 and char ~= 127 and ulen(st.input) < 32 then
-        st.input = st.input .. uchar(char)
-      end
-      return true
-    elseif st.mode == "confirm" then
-      if code == 31 or code == 21 then
-        doDelete()
-      elseif code == 49 or code == 1 then
-        backToList()
-      end
-      return true
-    elseif st.mode == "view" then
-      if code == 200 then
-        st.vfirst = math.max(1, st.vfirst - 1)
-      elseif code == 208 then
-        st.vfirst = math.max(1, math.min(st.vfirst + 1, #st.lines - rows + 1))
-      elseif code == 1 or code == 14 or code == 28 then
-        backToList()
-      end
-      return true
-    end
-    if code == 200 then
-      st.sel = st.sel - 1
-      keepVisible()
-      return true
-    elseif code == 208 then
-      st.sel = st.sel + 1
-      keepVisible()
-      return true
+    if code == 200 and st.sel > 1 then st.sel = st.sel - 1; return true
+    elseif code == 208 and st.sel < #st.items then st.sel = st.sel + 1; return true
     elseif code == 28 then
-      openItem()
+      local it = st.items[st.sel]
+      if it and it.dir then st.dir = it.path; reload() end
       return true
     elseif code == 14 then
-      goUp()
-      return true
-    elseif code == 211 then
-      startDelete()
-      return true
-    elseif code == 60 then
-      startRename()
+      if st.dir ~= "/" then st.dir = parentPath(st.dir); reload() end
       return true
     end
     return false
   end
-
   reload()
   return win
 end
 
----------------------------------------------------------------- app Editor Lua
 local function luaEditorApp()
   local win = newWindow(T.mEditor, nil, false)
-  win.w = math.min(w - 2, 60)
-  win.h = math.min(h - 2, 18)
-  win.x = math.floor((w - win.w) / 2) + 1
-  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
-
+  win.w, win.h = 56, 16
   local st = {
-    lines = { "-- Novo script Lua no Nitro OS", "print('Ola, Nitro OS!')" },
-    cy = 1, cx = 1, vfirst = 1, msg = "", msgColor = C.warn, filename = "/script.lua"
+    lines = { "-- Editor Lua Nitro OS", "print('Ola Mundo!')" },
+    cy = 1, cx = 1, vfirst = 1, msg = "", filename = "/script.lua"
   }
-
-  local function setMsg(text, color)
-    st.msg, st.msgColor = text, color or C.warn
-  end
-
-  local function saveFile()
-    local hnd = fs.open(st.filename, "w")
-    if not hnd then
-      setMsg(T.errPrefix .. "Salvar", C.err)
-      return
-    end
-    for _, l in ipairs(st.lines) do
-      fs.write(hnd, l .. "\n")
-    end
-    fs.close(hnd)
-    setMsg(T.saved, C.ok)
-  end
-
-  local function runScript()
-    local codeStr = table.concat(st.lines, "\n")
-    local func, err = load(codeStr, "=editor", "t", _ENV)
-    if not func then
-      setMsg(T.errPrefix .. tostring(err), C.err)
-      return
-    end
-    local ok, runErr = pcall(func)
-    if ok then
-      setMsg(T.executed, C.ok)
-    else
-      setMsg(T.errPrefix .. tostring(runErr), C.err)
-    end
-  end
-
-  local function curButtons()
-    local ix = win.x + 2
-    local defs = { { "save", T.bSave, C.ok }, { "run", T.bRun, C.accent } }
-    local out, x = {}, ix
-    for _, d in ipairs(defs) do
-      local label = " " .. d[2] .. " "
-      out[#out + 1] = { id = d[1], x = x, label = label, color = d[3] }
-      x = x + ulen(label) + 1
-    end
-    return out
-  end
-
   win.body = function(self)
     local ix, iw = self.x + 2, self.w - 4
-    local btnY, listY = self.y + 2, self.y + 4
-    local rows = self.h - 8
-    local statusY = self.y + self.h - 3
-
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
     put(ix, self.y + 1, st.filename, C.dim, C.panel, iw)
-
-    for _, b in ipairs(curButtons()) do
-      put(b.x, btnY, b.label, C.bg, b.color)
+    for n = 0, self.h - 7 do
+      local line = st.lines[st.vfirst + n]
+      if line then put(ix, self.y + 3 + n, string.format("%2d│ %s", st.vfirst + n, line), C.text, C.panel, iw) end
     end
-
-    for n = 0, rows - 1 do
-      local lineIdx = st.vfirst + n
-      local line = st.lines[lineIdx]
-      local y = listY + n
-      if line then
-        put(ix, y, string.format("%2d│ %s", lineIdx, line), C.text, C.panel, iw)
-      else
-        put(ix, y, string.format("%2d│", lineIdx), C.dim, C.panel, iw)
-      end
-    end
-
-    if st.msg ~= "" then
-      put(ix, statusY, st.msg, st.msgColor, C.panel, iw)
-    else
-      put(ix, statusY, string.format("Ln %d, Col %d", st.cy, st.cx), C.dim, C.panel, iw)
-    end
+    put(ix, self.y + self.h - 3, string.format("Ln %d, Col %d", st.cy, st.cx), C.dim, C.panel, iw)
   end
-
-  win.onTouch = function(self, x, y)
-    local btnY, listY = self.y + 2, self.y + 4
-    local rows = self.h - 8
-    if y == btnY then
-      for _, b in ipairs(curButtons()) do
-        if x >= b.x and x < b.x + ulen(b.label) then
-          if b.id == "save" then
-            saveFile()
-          elseif b.id == "run" then
-            runScript()
-          end
-          return true
-        end
-      end
-    elseif y >= listY and y < listY + rows then
-      local clickedRow = st.vfirst + (y - listY)
-      if clickedRow <= #st.lines then
-        st.cy = clickedRow
-        st.cx = math.min(st.cx, ulen(st.lines[st.cy]) + 1)
-        return true
-      end
-    end
-    return false
-  end
-
   win.onKey = function(self, char, code)
-    local rows = self.h - 8
-    if code == 200 then
-      st.cy = math.max(1, st.cy - 1)
-      if st.cy < st.vfirst then st.vfirst = st.cy end
-      st.cx = math.min(st.cx, ulen(st.lines[st.cy]) + 1)
-      return true
-    elseif code == 208 then
-      st.cy = math.min(#st.lines, st.cy + 1)
-      if st.cy >= st.vfirst + rows then st.vfirst = st.cy - rows + 1 end
-      st.cx = math.min(st.cx, ulen(st.lines[st.cy]) + 1)
-      return true
-    elseif code == 14 then
-      local line = st.lines[st.cy]
-      if st.cx > 1 then
-        st.lines[st.cy] = usub(line, 1, st.cx - 2) .. usub(line, st.cx)
-        st.cx = st.cx - 1
-      elseif st.cy > 1 then
-        local prevLine = st.lines[st.cy - 1]
-        st.cx = ulen(prevLine) + 1
-        st.lines[st.cy - 1] = prevLine .. line
-        table.remove(st.lines, st.cy)
-        st.cy = st.cy - 1
-        if st.cy < st.vfirst then st.vfirst = st.cy end
-      end
-      return true
-    elseif code == 28 then
-      local line = st.lines[st.cy]
-      local rest = usub(line, st.cx)
-      st.lines[st.cy] = usub(line, 1, st.cx - 1)
-      table.insert(st.lines, st.cy + 1, rest)
-      st.cy = st.cy + 1
-      st.cx = 1
-      if st.cy >= st.vfirst + rows then st.vfirst = st.cy - rows + 1 end
-      return true
-    elseif char and char >= 32 and char ~= 127 then
+    if code == 200 then st.cy = math.max(1, st.cy - 1); return true
+    elseif code == 208 then st.cy = math.min(#st.lines, st.cy + 1); return true
+    elseif code == 203 then st.cx = math.max(1, st.cx - 1); return true
+    elseif code == 205 then st.cx = math.min(ulen(st.lines[st.cy]) + 1, st.cx + 1); return true
+    elseif char and char >= 32 then
       local line = st.lines[st.cy]
       st.lines[st.cy] = usub(line, 1, st.cx - 1) .. uchar(char) .. usub(line, st.cx)
       st.cx = st.cx + 1
@@ -1573,298 +1206,21 @@ local function luaEditorApp()
     end
     return false
   end
-
   return win
 end
 
----------------------------------------------------------------- app Gestor de Disquetes
 local function floppyApp()
   local win = newWindow(T.mFloppy, nil, false)
-  win.w = math.min(w - 2, 50)
-  win.h = math.min(h - 2, 14)
-  win.x = math.floor((w - win.w) / 2) + 1
-  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
-
-  local floppyAddr = cl.list("filesystem")()
-  for addr in cl.list("filesystem") do
-    if addr ~= cp.getBootAddress() then
-      floppyAddr = addr
-      break
-    end
-  end
-
+  win.w, win.h = 50, 12
   win.body = function(self)
-    local ix, iw = self.x + 2, self.w - 4
+    local ix = self.x + 2
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
-    put(ix, self.y + 2, T.floppyTitle .. ":", C.dim, C.panel)
-    
-    if not floppyAddr or not cl.proxy(floppyAddr) then
-      put(ix, self.y + 4, T.noFloppy, C.err, C.panel, iw)
-      return
-    end
-
-    local fproxy = cl.proxy(floppyAddr)
-    local okSpace, spaceTotal = pcall(fproxy.spaceTotal)
-    local okUsed, spaceUsed = pcall(fproxy.spaceUsed)
-    
-    put(ix, self.y + 4, "Status: Inserida", C.ok, C.panel)
-    if okSpace and okUsed then
-      put(ix, self.y + 6, string.format("Uso: %d / %d KB", math.floor(spaceUsed/1024), math.floor(spaceTotal/1024)), C.text, C.panel)
-    end
-    put(ix, self.y + 9, "Endereço: " .. usub(floppyAddr, 1, 16) .. "...", C.dim, C.panel, iw)
+    put(ix, self.y + 2, "GESTOR DE DISCOS (ACRONIS STYLE)", C.accent, C.panel)
+    put(ix, self.y + 4, "[Disk 0] Sistema Principal (Boot)", C.text, C.panel)
+    put(ix, self.y + 6, "[Disk 1] Disquete / Armazenamento Removível", C.dim, C.panel)
   end
-
-  win.onKey = function(self, char, code)
-    if code == 1 or code == 28 then return true end
-    return false
-  end
-
+  win.onKey = function(self, char, code) if code == 1 or code == 28 then return true end return false end
   return win
-end
-
----------------------------------------------------------------- app Calculadora
-local CALC_LAYOUT = {
-  { { "C", "C" }, { "←", "BS" }, { "%", "%" }, { "÷", "/" } },
-  { { "7", "7" }, { "8", "8" }, { "9", "9" }, { "×", "*" } },
-  { { "4", "4" }, { "5", "5" }, { "6", "6" }, { "−", "-" } },
-  { { "1", "1" }, { "2", "2" }, { "3", "3" }, { "+", "+" } },
-  { { "0", "0", 2 }, { ".", "." }, { "=", "=" } },
-}
-local OPSYM = { ["+"] = "+", ["-"] = "−", ["*"] = "×", ["/"] = "÷" }
-
-local function calcFmt(n)
-  if n ~= n or n == math.huge or n == -math.huge then return nil end
-  return string.format("%.10g", n)
-end
-
-local function calcApply(a, b, o)
-  if o == "+" then
-    return a + b
-  elseif o == "-" then
-    return a - b
-  elseif o == "*" then
-    return a * b
-  elseif o == "/" then
-    if b == 0 then return nil end
-    return a / b
-  end
-  return nil
-end
-
-local function calcApp()
-  local win = newWindow(T.mCalc, nil, false)
-  win.w = 34
-  win.h = 11
-  win.x = math.floor((w - win.w) / 2) + 1
-  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
-
-  local BW, GAP = 6, 1
-  local gridW = 4 * BW + 3 * GAP
-
-  local cur, prev, op, expr = "0", nil, nil, ""
-  local fresh, isErr = true, false
-
-  local function clearAll()
-    cur, prev, op, expr = "0", nil, nil, ""
-    fresh, isErr = true, false
-  end
-
-  local function setError()
-    cur, prev, op, expr = T.calcErr, nil, nil, ""
-    fresh, isErr = true, true
-  end
-
-  local function digit(d)
-    if isErr then clearAll() end
-    if fresh then
-      cur = "0"
-      fresh = false
-    end
-    if cur == "0" then
-      cur = d
-    elseif #cur < 12 then
-      cur = cur .. d
-    end
-  end
-
-  local function dot()
-    if isErr then clearAll() end
-    if fresh then
-      cur = "0"
-      fresh = false
-    end
-    if not cur:find(".", 1, true) and #cur < 12 then cur = cur .. "." end
-  end
-
-  local function backspace()
-    if fresh or isErr then return end
-    cur = cur:sub(1, -2)
-    if cur == "" or cur == "-" then cur = "0" end
-  end
-
-  local function percent()
-    if isErr then return end
-    local v = tonumber(cur)
-    if v then
-      cur = calcFmt(v / 100) or cur
-      fresh = true
-    end
-  end
-
-  local function operator(o)
-    if isErr then return end
-    local val = tonumber(cur) or 0
-    if op and not fresh then
-      local r = calcApply(prev, val, op)
-      if r == nil or not calcFmt(r) then
-        setError()
-        return
-      end
-      prev = r
-      cur = calcFmt(r)
-    else
-      prev = val
-    end
-    op = o
-    fresh = true
-    expr = calcFmt(prev) .. " " .. OPSYM[o]
-  end
-
-  local function equals()
-    if isErr or not op then return end
-    local val = tonumber(cur) or 0
-    local r = calcApply(prev, val, op)
-    if r == nil or not calcFmt(r) then
-      setError()
-      return
-    end
-    expr = calcFmt(prev) .. " " .. OPSYM[op] .. " " .. calcFmt(val) .. " ="
-    cur = calcFmt(r)
-    prev, op, fresh = nil, nil, true
-  end
-
-  local function press(id)
-    if id:match("^%d$") then digit(id)
-    elseif id == "." then dot()
-    elseif id == "C" then clearAll()
-    elseif id == "BS" then backspace()
-    elseif id == "%" then percent()
-    elseif id == "=" then equals()
-    else operator(id) end
-  end
-
-  local function rects(self)
-    local out = {}
-    local gx = self.x + math.floor((self.w - gridW) / 2)
-    for r, row in ipairs(CALC_LAYOUT) do
-      local c = 0
-      for _, b in ipairs(row) do
-        local span = b[3] or 1
-        out[#out + 1] = {
-          label = b[1], id = b[2],
-          x = gx + c * (BW + GAP), y = self.y + 3 + r,
-          w = span * BW + (span - 1) * GAP,
-        }
-        c = c + span
-      end
-    end
-    return out
-  end
-
-  local function colors(id)
-    if id:match("^%d$") or id == "." then return 0x333333, C.text end
-    if id == "=" then return C.ok, C.bg end
-    if id == "C" then return C.warn, C.bg end
-    if id == "BS" or id == "%" then return 0x555555, C.text end
-    return C.accent, C.bg
-  end
-
-  local function drawButton(b, bg, fg)
-    rect(b.x, b.y, b.w, 1, bg)
-    put(b.x + math.floor((b.w - ulen(b.label)) / 2), b.y, b.label, fg, bg)
-  end
-
-  win.body = function(self)
-    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
-    local ix, iw = self.x + 2, self.w - 4
-    put(ix + iw - ulen(expr), self.y + 1, expr, C.dim, C.panel, iw)
-    rect(ix, self.y + 2, iw, 1, C.barbg)
-    put(ix + iw - 1 - ulen(cur), self.y + 2, cur, isErr and C.err or C.text, C.barbg, iw - 1)
-    for _, b in ipairs(rects(self)) do
-      local bg, fg = colors(b.id)
-      drawButton(b, bg, fg)
-    end
-  end
-
-  win.onTouch = function(self, x, y)
-    for _, b in ipairs(rects(self)) do
-      if y == b.y and x >= b.x and x < b.x + b.w then
-        drawButton(b, C.text, C.bg)
-        cp.pullSignal(0.1)
-        press(b.id)
-        return true
-      end
-    end
-    return false
-  end
-
-  win.onKey = function(self, char, code)
-    if code == 28 or code == 156 then
-      press("=")
-      return true
-    elseif code == 14 then
-      press("BS")
-      return true
-    end
-    if char and char >= 32 and char < 127 then
-      local ch = string.char(char)
-      if ch:match("%d") then
-        press(ch)
-        return true
-      elseif ch == "." or ch == "," then
-        press(".")
-        return true
-      elseif ch == "+" or ch == "-" or ch == "*" or ch == "/" then
-        press(ch)
-        return true
-      elseif ch == "=" or ch == "%" then
-        press(ch)
-        return true
-      elseif ch == "c" or ch == "C" then
-        press("C")
-        return true
-      end
-    end
-    return false
-  end
-
-  return win
-end
-
----------------------------------------------------------------- boas-vindas
-local function welcome(cfg)
-  local bw = math.min(w - 6, 40)
-  local bh = 7
-  local bx = math.floor((w - bw) / 2) + 1
-  local by = math.floor((h - bh) / 2)
-  drawBox(bx, by, bw, bh)
-
-  local function mid(y, s, fg, bg)
-    put(bx + math.floor((bw - ulen(s)) / 2), y, s, fg, bg)
-  end
-  mid(by + 2, string.format(T.welcome, cfg.user), C.text, C.panel)
-  mid(by + 3, T.ready, C.dim, C.panel)
-
-  local label = T.cont
-  local lx = bx + math.floor((bw - ulen(label)) / 2)
-  local ly = by + 5
-  put(lx, ly, label, C.bg, C.accent)
-
-  while true do
-    local ev, _, a, b = cp.pullSignal()
-    if ev == "key_down" and b == 28 then return end
-    if ev == "touch" and inside(a, b, lx, ly, ulen(label), 1) then return end
-  end
 end
 
 ---------------------------------------------------------------- desktop
@@ -1873,45 +1229,36 @@ local function desktop(cfg)
     { id = "files", label = T.mFiles },
     { id = "editor", label = T.mEditor },
     { id = "floppy", label = T.mFloppy },
-    { id = "calc", label = T.mCalc },
-    { id = "monitor", label = T.mMonitor },
     { id = "settings", label = T.mSettings },
+    { id = "cmd", label = T.mCmd },
+    { id = "webmin", label = T.mWebMin },
+    { id = "store", label = T.mStore },
     { id = "notes", label = T.mNotes },
     { id = "printer", label = T.mPrinter },
     { sep = true },
     { id = "restart", label = T.mRestart, color = C.warn },
     { id = "shutdown", label = T.mShutdown, color = C.err },
   }
+
+  local deskIcons = {
+    { id = "files", label = "[F] " .. T.mFiles, x = 4, y = 3 },
+    { id = "editor", label = "[E] " .. T.mEditor, x = 4, y = 5 },
+    { id = "floppy", label = "[D] " .. T.mFloppy, x = 4, y = 7 },
+    { id = "settings", label = "[S] " .. T.mSettings, x = 4, y = 9 },
+    { id = "cmd", label = "[CMD] Terminal", x = 4, y = 11 },
+    { id = "webmin", label = "[WEB] WebMin", x = 4, y = 13 },
+    { id = "store", label = "[APP] AppStore", x = 4, y = 15 },
+    { id = "notes", label = "[N] Notas", x = 4, y = 17 },
+  }
+
   local menuOpen, win = false, nil
   local guard
-  local notifText, notifTimer = nil, 0
-  local dragging = false
-  local dragOffsetX, dragOffsetY = 0, 0
-
-  local function showNotif(msg)
-    notifText = msg
-    notifTimer = cp.uptime() + 3
-  end
 
   local function render()
     rect(1, 1, w, h - 1, C.bg)
-    local size = logoSize()
-    local ly = math.floor((h - 1 - (size + 3)) / 2) + 1
-    drawLogo(math.floor((w - logoWidth(size)) / 2) + 1, ly, size, C.bg, 0x666666)
-    put(math.floor((w - ulen(T.empty)) / 2), ly + size + 1, T.empty, C.dim, C.bg)
-    put(math.floor((w - ulen(T.hint)) / 2), ly + size + 2, T.hint, C.dim, C.bg)
-
-    if notifText and cp.uptime() < notifTimer then
-      local nw = ulen(notifText) + 4
-      local nx = w - nw - 2
-      rect(nx, 2, nw, 3, C.panel)
-      put(nx, 2, "╭" .. string.rep("─", nw - 2) .. "╮", C.ok, C.panel)
-      put(nx, 3, "│ " .. notifText .. " │", C.text, C.panel)
-      put(nx, 4, "╰" .. string.rep("─", nw - 2) .. "╯", C.ok, C.panel)
-    else
-      notifText = nil
+    for _, icon in ipairs(deskIcons) do
+      put(icon.x, icon.y, icon.label, C.text, C.panel)
     end
-
     if win and not win.minimized then guard(drawWindow, win) end
     drawTaskbar(cfg, menuOpen)
     if menuOpen then drawMenu(items) end
@@ -1927,46 +1274,30 @@ local function desktop(cfg)
     return nil
   end
 
-  local function activate(it)
+  local function activateById(id)
     menuOpen = false
-    if it.id == "restart" then
-      cp.shutdown(true)
-    elseif it.id == "shutdown" then
-      cp.shutdown()
-    elseif it.id == "monitor" then
-      win = newWindow(T.mMonitor, monitorBody, true)
-    elseif it.id == "settings" then
-      win = guard(settingsApp, cfg)
-    elseif it.id == "files" then
-      win = guard(filesApp)
-    elseif it.id == "editor" then
-      win = guard(luaEditorApp)
-    elseif it.id == "floppy" then
-      win = guard(floppyApp)
-    elseif it.id == "calc" then
-      win = guard(calcApp)
-    else
-      win = newWindow(it.label, soonBody, false)
-    end
+    if id == "restart" then cp.shutdown(true)
+    elseif id == "shutdown" then cp.shutdown()
+    elseif id == "monitor" then win = newWindow(T.mMonitor, monitorBody, true)
+    elseif id == "settings" then win = guard(settingsApp, cfg)
+    elseif id == "cmd" then win = guard(function() return cmdApp(function() win = nil; render() end) end)
+    elseif id == "webmin" then win = guard(webminApp)
+    elseif id == "store" then win = guard(appStoreApp)
+    elseif id == "notes" then win = guard(notesApp)
+    elseif id == "printer" then win = guard(printerApp)
+    elseif id == "files" then win = guard(filesApp)
+    elseif id == "editor" then win = guard(luaEditorApp)
+    elseif id == "floppy" then win = guard(floppyApp)
+    else win = newWindow(id, function(s) put(s.x+2, s.y+2, T.soon, C.dim, C.panel) end, false) end
     render()
   end
 
   rect(1, 1, w, h, C.bg)
   drawTaskbar(cfg, false)
-  welcome(cfg)
   render()
 
   while true do
-    local ev, _, a, b, c = cp.pullSignal(0.5)
-
-    if ev == "component_added" then
-      showNotif("Dispositivo: " .. tostring(b))
-      render()
-    elseif ev == "component_removed" then
-      showNotif("Removido: " .. tostring(b))
-      render()
-    end
-
+    local ev, _, a, b, c = cp.pullSignal(0.8)
     if ev == "touch" then
       if b == h and a <= ulen(MENU_BTN) then
         menuOpen = not menuOpen
@@ -1979,47 +1310,30 @@ local function desktop(cfg)
         local mx, my, mw, mh = menuGeometry(items)
         if inside(a, b, mx, my, mw, mh) then
           local it = items[b - my]
-          if it and not it.sep then
-            put(mx + 1, b, string.rep(" ", mw - 2), C.bg, C.accent)
-            put(mx + 2, b, it.label, C.bg, C.accent, mw - 4)
-            cp.pullSignal(0.15)
-            activate(it)
-          end
+          if it and not it.sep then activateById(it.id) end
         else
           menuOpen = false
           render()
         end
-      elseif win and not win.minimized then
-        local action = handleWindowControls(win, a, b)
-        if action == "close" then
-          win = nil
-          render()
-        elseif action == "minimize" then
-          render()
-        elseif action == "maximize" then
-          render()
-        elseif b == win.y and a >= win.x and a < win.x + win.w - 10 then
-          dragging = true
-          dragOffsetX = a - win.x
-          dragOffsetY = b - win.y
-        elseif win.onTouch and inside(a, b, win.x, win.y, win.w, win.h) then
-          local handled = guard(win.onTouch, win, a, b)
-          if handled and win then guard(drawWindow, win) end
+      else
+        local clickedIcon = nil
+        for _, icon in ipairs(deskIcons) do
+          if b == icon.y and a >= icon.x and a < icon.x + ulen(icon.label) then
+            clickedIcon = icon.id
+            break
+          end
         end
-      elseif win and win.minimized and b == h and a >= 15 and a <= 30 then
-        win.minimized = false
-        render()
-      end
-    elseif ev == "drag" and dragging and win and not win.maximized then
-      win.x = math.max(1, math.min(w - win.w + 1, a - dragOffsetX))
-      win.y = math.max(1, math.min(h - win.h, b - dragOffsetY))
-      render()
-    elseif ev == "drop" then
-      dragging = false
-    elseif ev == "scroll" then
-      if win and win.onScroll and not menuOpen and not win.minimized then
-        guard(win.onScroll, win, c)
-        if win then guard(drawWindow, win) end
+        if clickedIcon then
+          activateById(clickedIcon)
+        elseif win and not win.minimized then
+          local action = handleWindowControls(win, a, b)
+          if action == "close" then win = nil; render()
+          elseif action == "minimize" or action == "maximize" then render()
+          elseif win.onTouch and inside(a, b, win.x, win.y, win.w, win.h) then
+            local handled = guard(win.onTouch, win, a, b)
+            if handled and win then guard(drawWindow, win) end
+          end
+        end
       end
     elseif ev == "key_down" then
       local handled = false
@@ -2028,13 +1342,8 @@ local function desktop(cfg)
         if handled and win then guard(drawWindow, win) end
       end
       if not handled and b == 1 then
-        if menuOpen then
-          menuOpen = false
-          render()
-        elseif win then
-          win = nil
-          render()
-        end
+        if menuOpen then menuOpen = false; render()
+        elseif win then win = nil; render() end
       end
     else
       render()
@@ -2042,19 +1351,16 @@ local function desktop(cfg)
   end
 end
 
----------------------------------------------------------------- inicio
+---------------------------------------------------------------- boot
 local stage = "boot"
-
 local function main()
   bootBase()
-  bootProgress(15, T.loadSys)
-  pause(0.4)
+  bootProgress(20, T.loadSys)
+  pause(0.3)
   local cfg = loadConfig()
   if cfg then T = (langs[cfg.lang] or langs[1]).t end
-  bootProgress(45, T.loadUser)
-  pause(0.4)
-  bootProgress(75, T.loadDesk)
-  pause(0.4)
+  bootProgress(60, T.loadUser)
+  pause(0.3)
   bootProgress(100, T.loadDone)
   pause(0.3)
   if not cfg then
