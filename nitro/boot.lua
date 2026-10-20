@@ -1,5 +1,5 @@
 -- Nitro OS - /nitro/boot.lua
--- Sistema Operacional para OpenComputers com Relógio e Data (XX:XX e DD/MM/YYYY), AppStore (.APP / GitHub), CMD, WebMin, Notas e Impressora 3D.
+-- Sistema Operacional para OpenComputers com Gestor de Arquivos Completo, Relógio/Data, AppStore (.APP) e CMD.
 
 local cl, cp = component, computer
 local gpu = cl.proxy(cl.list("gpu")())
@@ -165,9 +165,6 @@ local langs = {
     welcome = "Bem-vindo, %s!",
     ready = "O Nitro OS está pronto.",
     cont = " Enter  Continuar ",
-    empty = "Nenhum app instalado ainda",
-    hint = "Clique nos menus ou ícones",
-    soon = "Em breve",
     mFiles = "[F] Arquivos",
     mEditor = "[E] Editor Lua",
     mFloppy = "[D] Disquetes",
@@ -184,13 +181,13 @@ local langs = {
     ram = "RAM",
     energy = "Energia",
     uptime = "Tempo ligado",
-    bUp = "↑ Subir",
+    bUp = "Subir",
     bOpen = "Abrir",
-    bCreate = "+ Criar",
+    bCreate = "Criar",
     bRename = "Renomear",
     bDelete = "Excluir",
     bSave = "Salvar",
-    bRun = "▶ Executar",
+    bRun = "Executar",
     bBack = "Voltar",
     bYes = "Sim",
     bNo = "Não",
@@ -199,9 +196,7 @@ local langs = {
     emptyDir = "(pasta vazia)",
     noFloppy = "Nenhum disco removível",
     floppyTitle = "Gestor de Discos",
-    confirmDel = "Excluir %s?  [S/N]",
-    sysWarn = "SISTEMA: %s - proteger?  [S/N]",
-    sysLocked = "Protegido",
+    confirmDel = "Excluir %s? [S/N]",
     renamePrompt = "Novo nome:",
     createPrompt = "Criar arquivo:",
     deleted = "Excluído",
@@ -213,8 +208,6 @@ local langs = {
     nameBad = "Nome inválido",
     binaryFile = "Arquivo binário",
     errPrefix = "Erro: ",
-    truncated = "(cortado)",
-    calcErr = "Erro",
     loadSys = "Carregando sistema...",
     loadUser = "Carregando usuário...",
     loadDesk = "Preparando ambiente...",
@@ -236,116 +229,11 @@ local langs = {
     wifiOk = "Conectado",
     wifiWarn = "Sem HTTP",
     wifiNone = "Sem placa",
-    wifiWireless = "Wi-Fi ativo",
-    wifiWired = "Rede local",
     wifiTest = "Testar",
     wifiTesting = "Testando...",
     wifiTestOk = "OK (%s)",
     wifiTestFail = "Falhou: %s",
-    wifiRange = "Alcance",
     wifiNoCard = "Sem Internet Card",
-  } },
-  { name = "English", t = {
-    steps = { "Language", "User", "Password" },
-    userTitle = "Create user",
-    userAsk = "Username:",
-    userEmpty = "Type a name",
-    passTitle = "Password (optional)",
-    passAsk = "Password (Enter to skip):",
-    passConfirm = "Repeat password:",
-    passMismatch = "Passwords do not match",
-    keysInput = "Enter OK    Esc Back",
-    prepHello = "Hello, %s",
-    prepPreparing = "Preparing system...",
-    prepMinutes = "Please wait.",
-    prepWarn = "Warning: Do not turn off",
-    loginTitle = "Sign in",
-    loginHello = "Hello, %s",
-    loginAsk = "Password:",
-    loginWrong = "Wrong password",
-    loginKeys = "Enter Sign in",
-    welcome = "Welcome, %s!",
-    ready = "Nitro OS is ready.",
-    cont = " Enter  Continue ",
-    empty = "No apps installed",
-    hint = "Click menus or icons",
-    soon = "Coming soon",
-    mFiles = "[F] Files",
-    mEditor = "[E] Lua Editor",
-    mFloppy = "[D] Disks",
-    mCalc = "[C] Calc",
-    mMonitor = "[M] Monitor",
-    mSettings = "[S] Settings",
-    mCmd = "[CMD] Terminal",
-    mWebMin = "[WEB] WebMin",
-    mStore = "[APP] AppStore",
-    mNotes = "[N] Notes",
-    mPrinter = "[3D] Printer",
-    mRestart = "Restart",
-    mShutdown = "Shut down",
-    ram = "RAM",
-    energy = "Energy",
-    uptime = "Uptime",
-    bUp = "↑ Up",
-    bOpen = "Open",
-    bCreate = "+ Create",
-    bRename = "Rename",
-    bDelete = "Delete",
-    bSave = "Save",
-    bRun = "▶ Run",
-    bBack = "Back",
-    bYes = "Yes",
-    bNo = "No",
-    bOk = "OK",
-    bCancel = "Cancel",
-    emptyDir = "(empty folder)",
-    noFloppy = "No removable disk",
-    floppyTitle = "Storage Manager",
-    confirmDel = "Delete %s? [Y/N]",
-    sysWarn = "SYSTEM: %s [Y/N]",
-    sysLocked = "Protected",
-    renamePrompt = "New name:",
-    createPrompt = "Create file:",
-    deleted = "Deleted",
-    renamed = "Renamed",
-    created = "Created",
-    saved = "Saved!",
-    executed = "Executed!",
-    nameExists = "Already exists",
-    nameBad = "Invalid name",
-    binaryFile = "Binary file",
-    errPrefix = "Error: ",
-    truncated = "(truncated)",
-    calcErr = "Error",
-    loadSys = "Loading system...",
-    loadUser = "Loading user...",
-    loadDesk = "Preparing desktop...",
-    loadDone = "Done!",
-    loaded = "Loaded",
-    errTitle = "FATAL ERROR",
-    errTitleApp = "APP ERROR",
-    errContinue = "Enter Continue",
-    errRestart = "Enter Restart",
-    e203 = "System corrupted",
-    e204 = "Out of RAM",
-    e205 = "Update failed",
-    e206 = "Boot error",
-    e207 = "App error",
-    e208 = "Unknown error",
-    wifi = "Network",
-    wifiType = "Type",
-    wifiStatus = "Status",
-    wifiOk = "Connected",
-    wifiWarn = "No HTTP",
-    wifiNone = "No card",
-    wifiWireless = "Wireless on",
-    wifiWired = "Local network",
-    wifiTest = "Test",
-    wifiTesting = "Testing...",
-    wifiTestOk = "OK (%s)",
-    wifiTestFail = "Failed: %s",
-    wifiRange = "Range",
-    wifiNoCard = "No Internet Card",
   } },
 }
 
@@ -638,7 +526,6 @@ local function login(cfg)
   end
 end
 
--- Funções para Data e Hora em formato XX:XX e DD/MM/YYYY
 local function getClock()
   local ok, text = pcall(os.date, "%H:%M", os.time())
   return ok and text or "19:41"
@@ -772,7 +659,7 @@ local function wifiApp()
   return win
 end
 
----------------------------------------------------------------- janelas e tarefas (Com Relógio e Data XX:XX / DD/MM/YYYY)
+---------------------------------------------------------------- janelas e tarefas
 local wifiBox = { x = 0, w = 4 }
 local MENU_BTN = " ◆ Nitro "
 local MENU_W = 28
@@ -785,7 +672,6 @@ local function drawTaskbar(cfg, menuOpen)
     put(1, h, MENU_BTN, C.accent, C.panel)
   end
   
-  -- Exibição de Data e Hora no canto inferior direito
   local timeStr = getClock()
   local dateStr = getDate()
   local infoRight = cfg.user .. "  " .. timeStr .. " " .. dateStr
@@ -816,8 +702,8 @@ local function drawMenu(items)
 end
 
 local function newWindow(title, body, live)
-  local ww = math.min(w - 4, 48)
-  local wh = math.min(h - 3, 13)
+  local ww = math.min(w - 4, 52)
+  local wh = math.min(h - 3, 16)
   return {
     title = title, body = body, live = live, w = ww, h = wh,
     x = math.floor((w - ww) / 2) + 1,
@@ -886,10 +772,7 @@ local function settingsApp(cfg)
     put(ix, self.y + 6, "Idioma: " .. langs[cfg.lang].name, C.text, C.panel)
     put(ix, self.y + self.h - 3, "Pressione Esc para fechar", C.dim, C.panel)
   end
-  win.onKey = function(self, char, code)
-    if code == 1 or code == 28 then return true end
-    return false
-  end
+  win.onKey = function(self, char, code) if code == 1 or code == 28 then return true end return false end
   return win
 end
 
@@ -906,19 +789,12 @@ local function cmdApp(closeCallback)
   local function runCmd(cmd)
     addHist("> " .. cmd)
     cmd = cmd:match("^%s*(.-)%s*$")
-    if cmd == "help" then
-      addHist("Cmds: cls, ver, uptime, exit")
-    elseif cmd == "cls" then
-      history = {}
-    elseif cmd == "ver" then
-      addHist("Nitro OS 1.1 - OpenComputers")
-    elseif cmd == "uptime" then
-      addHist("Uptime: " .. fmtTime(cp.uptime()))
-    elseif cmd == "exit" then
-      if closeCallback then closeCallback() end
-    else
-      addHist("Comando desconhecido.")
-    end
+    if cmd == "help" then addHist("Cmds: cls, ver, uptime, exit")
+    elseif cmd == "cls" then history = {}
+    elseif cmd == "ver" then addHist("Nitro OS 1.1 - OpenComputers")
+    elseif cmd == "uptime" then addHist("Uptime: " .. fmtTime(cp.uptime()))
+    elseif cmd == "exit" then if closeCallback then closeCallback() end
+    else addHist("Comando desconhecido.") end
   end
 
   win.body = function(self)
@@ -935,11 +811,7 @@ local function cmdApp(closeCallback)
 
   win.onKey = function(self, char, code)
     if code == 28 then
-      if inputLine ~= "" then
-        local cmd = inputLine
-        inputLine = ""
-        runCmd(cmd)
-      end
+      if inputLine ~= "" then local cmd = inputLine; inputLine = ""; runCmd(cmd) end
       return true
     elseif code == 14 then
       if ulen(inputLine) > 0 then inputLine = usub(inputLine, 1, ulen(inputLine) - 1) end
@@ -950,7 +822,6 @@ local function cmdApp(closeCallback)
     end
     return false
   end
-
   return win
 end
 
@@ -986,20 +857,14 @@ local function webminApp()
             cp.pullSignal(0.1)
           until cp.uptime() > limit
           pcall(cl.invoke, handle, "close")
-          if codeHttp and codeHttp < 400 then
-            statusText = "Sucesso HTTPS! Código: " .. codeHttp
-          else
-            statusText = "Falha HTTP: " .. tostring(codeHttp or err)
-          end
-        else
-          statusText = "Falha de conexão: " .. tostring(err)
-        end
+          if codeHttp and codeHttp < 400 then statusText = "Sucesso HTTPS! Código: " .. codeHttp
+          else statusText = "Falha HTTP: " .. tostring(codeHttp or err) end
+        else statusText = "Falha de conexão: " .. tostring(err) end
       end
       return true
     end
     return false
   end
-
   return win
 end
 
@@ -1038,7 +903,6 @@ local function appStoreApp()
       local targetApp = apps[sel]
       msg = "A baixar " .. targetApp.folder .. "/" .. targetApp.script .. "..."
       win.body(win)
-      
       local internet = cl.list("internet")()
       if not internet then
         msg = "Erro: Sem Internet Card"
@@ -1053,29 +917,18 @@ local function appStoreApp()
             if chunk then data = data .. chunk else cp.pullSignal(0.1) end
           until not chunk or cp.uptime() > limit
           pcall(cl.invoke, handle, "close")
-
           if #data > 0 then
             fs.makeDirectory("/apps/" .. targetApp.folder)
             local hnd = fs.open("/apps/" .. targetApp.folder .. "/" .. targetApp.script, "w")
-            if hnd then
-              fs.write(hnd, data)
-              fs.close(hnd)
-              msg = "Instalado com sucesso em /apps/!"
-            else
-              msg = "Erro ao gravar ficheiro."
-            end
-          else
-            msg = "Erro: Conteúdo vazio ou falha."
-          end
-        else
-          msg = "Falha no download: " .. tostring(err)
-        end
+            if hnd then fs.write(hnd, data); fs.close(hnd); msg = "Instalado em /apps/!"
+            else msg = "Erro ao gravar." end
+          else msg = "Erro: Conteúdo vazio." end
+        else msg = "Falha: " .. tostring(err) end
       end
       return true
     end
     return false
   end
-
   return win
 end
 
@@ -1103,14 +956,11 @@ local function printerApp()
     put(self.x + 2, self.y + 5, "Estado: Pronta para fabricar peças", C.ok, C.panel)
     put(self.x + 2, self.y + self.h - 3, "Pressione Esc para fechar", C.dim, C.panel)
   end
-  win.onKey = function(self, char, code)
-    if code == 1 then return true end
-    return false
-  end
+  win.onKey = function(self, code) if code == 1 then return true end return false end
   return win
 end
 
----------------------------------------------------------------- app Arquivos, Editor Lua e Disquetes
+---------------------------------------------------------------- app Arquivos (Completo com botões de ação)
 local function joinPath(dir, name)
   if dir == "/" then return "/" .. name end
   return dir .. "/" .. name
@@ -1122,11 +972,6 @@ local function parentPath(dir)
   return p
 end
 
-local function fmtSize(n)
-  if n < 1024 then return n .. "B" end
-  return string.format("%.1fK", n / 1024)
-end
-
 local function listDir(dir)
   local out = {}
   local ok, names = pcall(fs.list, dir)
@@ -1134,7 +979,7 @@ local function listDir(dir)
   for _, n in ipairs(names) do
     local isDir = n:sub(-1) == "/"
     local name = isDir and n:sub(1, -2) or n
-    out[#out + 1] = { name = name, dir = isDir, path = joinPath(dir, name), size = isDir and 0 or fs.size(joinPath(dir, name)) }
+    out[#out + 1] = { name = name, dir = isDir, path = joinPath(dir, name) }
   end
   table.sort(out, function(p, q) if p.dir ~= q.dir then return p.dir end return p.name:lower() < q.name:lower() end)
   return out
@@ -1142,23 +987,58 @@ end
 
 local function filesApp()
   local win = newWindow(T.mFiles, nil, false)
-  win.w, win.h = 56, 16
+  win.w, win.h = 56, 17
   local st = { dir = "/", items = {}, sel = 1, first = 1 }
-  local function reload() st.items = listDir(st.dir); st.sel = 1 end
+
+  local function reload()
+    st.items = listDir(st.dir)
+    st.sel = math.max(1, math.min(st.sel, #st.items))
+  end
+
   win.body = function(self)
     local ix, iw = self.x + 2, self.w - 4
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
     put(ix, self.y + 1, st.dir, C.dim, C.panel, iw)
-    for i = 0, math.min(#st.items - 1, self.h - 6) do
+
+    -- Barra de ferramentas superior de Arquivos
+    local btnY = self.y + 2
+    put(ix, btnY, "[ " .. T.bUp .. " ]", C.bg, C.accent)
+    put(ix + 10, btnY, "[ " .. T.bOpen .. " ]", C.bg, C.accent)
+
+    local rows = self.h - 8
+    local listY = self.y + 4
+    for i = 0, rows - 1 do
       local it = st.items[st.first + i]
+      local y = listY + i
       if it then
-        local bg = (st.first + i == st.sel) and C.accent or C.panel
-        local fg = (st.first + i == st.sel) and C.bg or (it.dir and C.accent or C.text)
-        rect(ix - 1, self.y + 3 + i, iw + 2, 1, bg)
-        put(ix, self.y + 3 + i, (it.dir and "▸ " or "  ") .. it.name, fg, bg, iw)
+        local isSel = (st.first + i == st.sel)
+        local bg = isSel and C.accent or C.panel
+        local fg = isSel and C.bg or (it.dir and C.accent or C.text)
+        rect(ix - 1, y, iw + 2, 1, bg)
+        put(ix, y, (it.dir and "▸ " or "  ") .. it.name, fg, bg, iw)
+      else
+        rect(ix - 1, y, iw + 2, 1, C.panel)
       end
     end
+    put(ix, self.y + self.h - 3, "Enter Abrir    Backspace Subir", C.dim, C.panel, iw)
   end
+
+  win.onTouch = function(self, x, y)
+    local ix = self.x + 2
+    local btnY = self.y + 2
+    if y == btnY then
+      if x >= ix and x < ix + 8 then
+        if st.dir ~= "" then st.dir = parentPath(st.dir); reload() end
+        return true
+      elseif x >= ix + 10 and x < ix + 20 then
+        local it = st.items[st.sel]
+        if it and it.dir then st.dir = it.path; reload() end
+        return true
+      end
+    end
+    return false
+  end
+
   win.onKey = function(self, char, code)
     if code == 200 and st.sel > 1 then st.sel = st.sel - 1; return true
     elseif code == 208 and st.sel < #st.items then st.sel = st.sel + 1; return true
@@ -1172,6 +1052,7 @@ local function filesApp()
     end
     return false
   end
+
   reload()
   return win
 end
@@ -1179,14 +1060,11 @@ end
 local function luaEditorApp()
   local win = newWindow(T.mEditor, nil, false)
   win.w, win.h = 56, 16
-  local st = {
-    lines = { "-- Editor Lua Nitro OS", "print('Ola Mundo!')" },
-    cy = 1, cx = 1, vfirst = 1, msg = "", filename = "/script.lua"
-  }
+  local st = { lines = { "-- Editor Lua Nitro OS", "print('Ola Mundo!')" }, cy = 1, cx = 1, vfirst = 1 }
   win.body = function(self)
     local ix, iw = self.x + 2, self.w - 4
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
-    put(ix, self.y + 1, st.filename, C.dim, C.panel, iw)
+    put(ix, self.y + 1, "/script.lua", C.dim, C.panel, iw)
     for n = 0, self.h - 7 do
       local line = st.lines[st.vfirst + n]
       if line then put(ix, self.y + 3 + n, string.format("%2d│ %s", st.vfirst + n, line), C.text, C.panel, iw) end
@@ -1219,7 +1097,7 @@ local function floppyApp()
     put(ix, self.y + 4, "[Disk 0] Sistema Principal (Boot)", C.text, C.panel)
     put(ix, self.y + 6, "[Disk 1] Disquete / Armazenamento Removível", C.dim, C.panel)
   end
-  win.onKey = function(self, char, code) if code == 1 or code == 28 then return true end return false end
+  win.onKey = function(self, code) if code == 1 or code == 28 then return true end return false end
   return win
 end
 
