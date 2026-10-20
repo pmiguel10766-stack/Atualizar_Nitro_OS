@@ -1,5 +1,5 @@
 -- Nitro OS - /nitro/boot.lua
--- Sistema Operacional para OpenComputers com AppStore estilizada, Logotipo, Desktop limpo e Gestor de Arquivos.
+-- Sistema Operacional para OpenComputers com Painel de Configurações Estilo Windows, AppStore, Relógio/Data e Gestor de Arquivos.
 
 local cl, cp = component, computer
 local gpu = cl.proxy(cl.list("gpu")())
@@ -18,7 +18,7 @@ local CONFIG = "/nitro/config.lua"
 local C = {
   bg = 0x050505, panel = 0x1A1A1A, accent = 0xFF2D2D, text = 0xFFFFFF,
   dim = 0xA0A0A0, ok = 0x3DDC84, warn = 0xFFB300, err = 0xFF8A8A,
-  barbg = 0x3A3A3A,
+  barbg = 0x3A3A3A, sidebar = 0x242424,
 }
 
 local function rect(x, y, rw, rh, bg)
@@ -702,8 +702,8 @@ local function drawMenu(items)
 end
 
 local function newWindow(title, body, live)
-  local ww = math.min(w - 4, 52)
-  local wh = math.min(h - 3, 16)
+  local ww = math.min(w - 4, 60)
+  local wh = math.min(h - 3, 18)
   return {
     title = title, body = body, live = live, w = ww, h = wh,
     x = math.floor((w - ww) / 2) + 1,
@@ -761,18 +761,79 @@ local function monitorBody(win)
   put(x, win.y + 8, T.uptime .. ": " .. fmtTime(cp.uptime()), C.text, C.panel, bw)
 end
 
----------------------------------------------------------------- Apps do Sistema
+---------------------------------------------------------------- Apps do Sistema (Painel de Configurações Estilo Windows)
 local function settingsApp(cfg)
   local win = newWindow(T.mSettings, nil, false)
+  local selCat = 1
+  local categories = { "Sistema", "Rede", "Personalização", "Contas", "Sobre" }
+
   win.body = function(self)
-    local ix, iw = self.x + 2, self.w - 4
-    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
-    put(ix, self.y + 2, "PAINEL DE CONFIGURAÇÕES", C.accent, C.panel)
-    put(ix, self.y + 4, "Usuário: " .. cfg.user, C.text, C.panel)
-    put(ix, self.y + 6, "Idioma: " .. langs[cfg.lang].name, C.text, C.panel)
-    put(ix, self.y + self.h - 3, "Pressione Esc para fechar", C.dim, C.panel)
+    local sx = self.x + 1
+    local sy = self.y + 1
+    local sw = 16
+    local sh = self.h - 2
+
+    -- Desenha a barra lateral (Sidebar estilo Windows)
+    rect(sx, sy, sw, sh, C.sidebar)
+    for i, cat in ipairs(categories) do
+      local cy = sy + 1 + (i - 1) * 2
+      if i == selCat then
+        rect(sx, cy, sw, 1, C.accent)
+        put(sx + 1, cy, "▶ " .. cat, C.bg, C.accent, sw - 1)
+      else
+        put(sx + 2, cy, cat, C.text, C.sidebar, sw - 2)
+      end
+    end
+
+    -- Painel de conteúdo à direita
+    local cx = sx + sw
+    local cw = self.w - sw - 1
+    rect(cx, sy, cw, sh, C.panel)
+
+    if selCat == 1 then
+      put(cx + 2, sy + 2, "PAINEL DO SISTEMA", C.accent, C.panel)
+      put(cx + 2, sy + 4, "Usuário: " .. cfg.user, C.text, C.panel)
+      put(cx + 2, sy + 6, "Versão RAM: " .. math.floor(cp.totalMemory() / 1024) .. " KB", C.dim, C.panel)
+    elseif selCat == 2 then
+      put(cx + 2, sy + 2, "CONFIGURAÇÕES DE REDE", C.accent, C.panel)
+      local info = netInfo()
+      put(cx + 2, sy + 4, "Estado: " .. (info.state == "ok" and "Conectado" or "Aviso"), C.ok, C.panel)
+    elseif selCat == 3 then
+      put(cx + 2, sy + 2, "PERSONALIZAÇÃO", C.accent, C.panel)
+      put(cx + 2, sy + 4, "Tema: Escuro (Dark Minimal)", C.text, C.panel)
+    elseif selCat == 4 then
+      put(cx + 2, sy + 2, "CONTAS DE UTILIZADOR", C.accent, C.panel)
+      put(cx + 2, sy + 4, "Perfil ativo: " .. cfg.user, C.text, C.panel)
+    elseif selCat == 5 then
+      put(cx + 2, sy + 2, "SOBRE O NITRO OS", C.accent, C.panel)
+      put(cx + 2, sy + 4, "Nitro OS v1.1 - OpenComputers", C.text, C.panel)
+      put(cx + 2, sy + 6, "Desenvolvido para PMiguel", C.dim, C.panel)
+    end
   end
-  win.onKey = function(self, char, code) if code == 1 or code == 28 then return true end return false end
+
+  win.onTouch = function(self, x, y)
+    local sx = self.x + 1
+    local sy = self.y + 1
+    local sw = 16
+    if x >= sx and x < sx + sw then
+      for i = 1, #categories do
+        local cy = sy + 1 + (i - 1) * 2
+        if y == cy then
+          selCat = i
+          return true
+        end
+      end
+    end
+    return false
+  end
+
+  win.onKey = function(self, char, code)
+    if code == 200 and selCat > 1 then selCat = selCat - 1; return true
+    elseif code == 208 and selCat < #categories then selCat = selCat + 1; return true
+    elseif code == 1 or code == 28 then return true end
+    return false
+  end
+
   return win
 end
 
@@ -880,8 +941,6 @@ local function appStoreApp()
   win.body = function(self)
     local ix, iw = self.x + 2, self.w - 4
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
-    
-    -- Logotipo gráfico da AppStore
     put(ix, self.y + 2, "  [◆] NITRO APPSTORE  ", C.bg, C.accent, iw)
     put(ix, self.y + 3, string.rep("─", iw), C.dim, C.panel)
 
@@ -1102,7 +1161,7 @@ local function floppyApp()
   return win
 end
 
----------------------------------------------------------------- desktop (Ícones limpos sem texto extra)
+---------------------------------------------------------------- desktop
 local function desktop(cfg)
   local items = {
     { id = "files", label = T.mFiles },
