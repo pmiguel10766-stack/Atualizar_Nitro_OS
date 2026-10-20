@@ -1,5 +1,5 @@
 -- Nitro OS - /nitro/boot.lua
--- Sistema Operacional para OpenComputers com Gestor de Arquivos Completo, Relógio/Data, AppStore (.APP) e CMD.
+-- Sistema Operacional para OpenComputers com AppStore estilizada, Logotipo, Desktop limpo e Gestor de Arquivos.
 
 local cl, cp = component, computer
 local gpu = cl.proxy(cl.list("gpu")())
@@ -165,17 +165,17 @@ local langs = {
     welcome = "Bem-vindo, %s!",
     ready = "O Nitro OS está pronto.",
     cont = " Enter  Continuar ",
-    mFiles = "[F] Arquivos",
-    mEditor = "[E] Editor Lua",
-    mFloppy = "[D] Disquetes",
-    mCalc = "[C] Calc",
-    mMonitor = "[M] Monitor",
-    mSettings = "[S] Ajustes",
-    mCmd = "[CMD] Terminal",
-    mWebMin = "[WEB] WebMin",
-    mStore = "[APP] AppStore",
-    mNotes = "[N] Notas",
-    mPrinter = "[3D] Impressora",
+    mFiles = "Arquivos",
+    mEditor = "Editor Lua",
+    mFloppy = "Disquetes",
+    mCalc = "Calc",
+    mMonitor = "Monitor",
+    mSettings = "Ajustes",
+    mCmd = "Terminal",
+    mWebMin = "WebMin",
+    mStore = "AppStore",
+    mNotes = "Notas",
+    mPrinter = "Impressora",
     mRestart = "Reiniciar",
     mShutdown = "Desligar",
     ram = "RAM",
@@ -880,7 +880,9 @@ local function appStoreApp()
   win.body = function(self)
     local ix, iw = self.x + 2, self.w - 4
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
-    put(ix, self.y + 2, "NITRO APPSTORE (.APP)", C.accent, C.panel)
+    
+    -- Logotipo gráfico da AppStore
+    put(ix, self.y + 2, "  [◆] NITRO APPSTORE  ", C.bg, C.accent, iw)
     put(ix, self.y + 3, string.rep("─", iw), C.dim, C.panel)
 
     for i, app in ipairs(apps) do
@@ -960,7 +962,7 @@ local function printerApp()
   return win
 end
 
----------------------------------------------------------------- app Arquivos (Completo com botões de ação)
+---------------------------------------------------------------- app Arquivos
 local function joinPath(dir, name)
   if dir == "/" then return "/" .. name end
   return dir .. "/" .. name
@@ -1000,7 +1002,6 @@ local function filesApp()
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
     put(ix, self.y + 1, st.dir, C.dim, C.panel, iw)
 
-    -- Barra de ferramentas superior de Arquivos
     local btnY = self.y + 2
     put(ix, btnY, "[ " .. T.bUp .. " ]", C.bg, C.accent)
     put(ix + 10, btnY, "[ " .. T.bOpen .. " ]", C.bg, C.accent)
@@ -1101,7 +1102,7 @@ local function floppyApp()
   return win
 end
 
----------------------------------------------------------------- desktop
+---------------------------------------------------------------- desktop (Ícones limpos sem texto extra)
 local function desktop(cfg)
   local items = {
     { id = "files", label = T.mFiles },
@@ -1119,14 +1120,14 @@ local function desktop(cfg)
   }
 
   local deskIcons = {
-    { id = "files", label = "[F] " .. T.mFiles, x = 4, y = 3 },
-    { id = "editor", label = "[E] " .. T.mEditor, x = 4, y = 5 },
-    { id = "floppy", label = "[D] " .. T.mFloppy, x = 4, y = 7 },
-    { id = "settings", label = "[S] " .. T.mSettings, x = 4, y = 9 },
-    { id = "cmd", label = "[CMD] Terminal", x = 4, y = 11 },
-    { id = "webmin", label = "[WEB] WebMin", x = 4, y = 13 },
-    { id = "store", label = "[APP] AppStore", x = 4, y = 15 },
-    { id = "notes", label = "[N] Notas", x = 4, y = 17 },
+    { id = "files", label = "[F]", x = 4, y = 3 },
+    { id = "editor", label = "[E]", x = 4, y = 5 },
+    { id = "floppy", label = "[D]", x = 4, y = 7 },
+    { id = "settings", label = "[S]", x = 4, y = 9 },
+    { id = "cmd", label = "[CMD]", x = 4, y = 11 },
+    { id = "webmin", label = "[WEB]", x = 4, y = 13 },
+    { id = "store", label = "[APP]", x = 4, y = 15 },
+    { id = "notes", label = "[N]", x = 4, y = 17 },
   }
 
   local menuOpen, win = false, nil
