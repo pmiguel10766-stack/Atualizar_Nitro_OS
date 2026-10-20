@@ -1,5 +1,5 @@
 -- Nitro OS - /nitro/boot.lua
--- Sistema Operacional para OpenComputers com Painel de Configurações Estilo Windows, AppStore, Relógio/Data e Gestor de Arquivos.
+-- Sistema Operacional para OpenComputers com WebMin em formato Dashboard, Painel de Configurações, AppStore e Gestor de Arquivos.
 
 local cl, cp = component, computer
 local gpu = cl.proxy(cl.list("gpu")())
@@ -41,10 +41,10 @@ local function key()
   end
 end
 
-local pw = math.min(w - 4, 64)
+local pw = math.min(w - 4, 60)
 local px = math.floor((w - pw) / 2) + 1
 local py = 4
-local ph = math.max(9, math.min(h - 5, 22))
+local ph = math.max(10, math.min(h - 5, 18))
 local cx = px + 3
 local cw = pw - 6
 
@@ -559,7 +559,7 @@ local function drawBox(x, y, bw, bh, title)
   if title then put(x + 2, y, " " .. title .. " ", C.text, C.panel, bw - 12) end
 end
 
----------------------------------------------------------------- rede / WebMin
+---------------------------------------------------------------- rede / WebMin Dashboard GUI
 local NET_TEST = "https://raw.githubusercontent.com/pmiguel10766-stack/nitro-appstore/main/files.txt"
 
 local function netInfo()
@@ -617,45 +617,61 @@ local function netTest()
   return true, string.format("%d ms", math.floor((cp.uptime() - t0) * 1000))
 end
 
-local function wifiApp()
-  local win = { title = T.wifi, w = 40, h = 10 }
-  win.x = math.floor((w - win.w) / 2) + 1
-  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
-  local ix, iw = win.x + 2, win.w - 4
-  local testY = win.y + 6
-  local result, resultColor = "", C.dim
+local function webminApp()
+  local win = newWindow(T.mWebMin, nil, false)
+  win.w, win.h = 56, 15
+  local statusText = "Pronto para teste HTTPS (api.github.com)."
+  local searchQuery = ""
 
   win.body = function(self)
-    local info = netInfo()
+    local ix, iw = self.x + 2, self.w - 4
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
-    put(ix, self.y + 2, T.wifiType .. ":", C.dim, C.panel)
-    for i, name in ipairs(info.types) do
-      put(ix + 9, self.y + 1 + i, name, C.text, C.panel, iw - 9)
-    end
-    put(ix, self.y + 4, T.wifiStatus .. ":", C.dim, C.panel)
-    put(ix + 9, self.y + 4, info.state == "ok" and T.wifiOk or T.wifiWarn, C.ok, C.panel)
-    if result ~= "" then put(ix, self.y + 5, result, resultColor, C.panel, iw) end
-    rect(ix, testY, ulen(T.wifiTest) + 2, 1, C.accent)
-    put(ix + 1, testY, T.wifiTest, C.bg, C.accent)
+    
+    -- Logotipo do Dashboard WebMin
+    put(ix + math.floor((iw - 12)/2), self.y + 2, "◆ WebMin", C.accent, C.panel)
+    
+    -- Barra de pesquisa estilo Dashboard
+    rect(ix, self.y + 4, iw, 1, C.barbg)
+    put(ix + 1, self.y + 4, "🔍 " .. (searchQuery == "" and "Pesquise módulos e configurações..." or searchQuery), C.dim, C.barbg, iw - 2)
+
+    put(ix, self.y + 7, "Estado: " .. statusText, C.text, C.panel, iw)
+    
+    -- Botões de Acesso Rápido
+    rect(ix, self.y + 10, 18, 1, C.accent)
+    put(ix + 1, self.y + 10, "Login no Dashboard", C.bg, C.accent)
+
+    rect(ix + 20, self.y + 10, 18, 1, C.barbg)
+    put(ix + 21, self.y + 10, "Acessar Tutoriais", C.text, C.barbg)
+
+    put(ix, self.y + self.h - 3, "[Pressione Enter para testar HTTPS]", C.ok, C.panel)
   end
 
-  win.onTouch = function(self, x, y)
-    if y == testY and x >= ix and x < ix + ulen(T.wifiTest) + 2 then
-      result, resultColor = T.wifiTesting, C.dim
+  win.onKey = function(self, char, code)
+    if code == 28 then
+      statusText = "A contactar via HTTPS..."
       win.body(win)
-      local ok, msg = netTest()
-      if ok then result, resultColor = string.format(T.wifiTestOk, msg), C.ok
-      else result, resultColor = string.format(T.wifiTestFail, msg), C.err end
+      local internet = cl.list("internet")()
+      if not internet then
+        statusText = "Erro: Sem Internet Card"
+      else
+        local handle, err = cl.invoke(internet, "request", "https://api.github.com")
+        if handle then
+          local codeHttp = nil
+          local limit = cp.uptime() + 5
+          repeat
+            local success = pcall(function() codeHttp = handle.response() end)
+            if success and codeHttp then break end
+            cp.pullSignal(0.1)
+          until cp.uptime() > limit
+          pcall(cl.invoke, handle, "close")
+          if codeHttp and codeHttp < 400 then statusText = "Sucesso HTTPS! Código: " .. codeHttp
+          else statusText = "Falha HTTP: " .. tostring(codeHttp or err) end
+        else statusText = "Falha de conexão: " .. tostring(err) end
+      end
       return true
     end
     return false
   end
-
-  win.onKey = function(self, char, code)
-    if code == 28 then return true end
-    return false
-  end
-
   return win
 end
 
@@ -761,7 +777,7 @@ local function monitorBody(win)
   put(x, win.y + 8, T.uptime .. ": " .. fmtTime(cp.uptime()), C.text, C.panel, bw)
 end
 
----------------------------------------------------------------- Apps do Sistema (Painel de Configurações Estilo Windows)
+---------------------------------------------------------------- Apps do Sistema
 local function settingsApp(cfg)
   local win = newWindow(T.mSettings, nil, false)
   local selCat = 1
@@ -773,7 +789,6 @@ local function settingsApp(cfg)
     local sw = 16
     local sh = self.h - 2
 
-    -- Desenha a barra lateral (Sidebar estilo Windows)
     rect(sx, sy, sw, sh, C.sidebar)
     for i, cat in ipairs(categories) do
       local cy = sy + 1 + (i - 1) * 2
@@ -785,7 +800,6 @@ local function settingsApp(cfg)
       end
     end
 
-    -- Painel de conteúdo à direita
     local cx = sx + sw
     local cw = self.w - sw - 1
     rect(cx, sy, cw, sh, C.panel)
@@ -879,49 +893,6 @@ local function cmdApp(closeCallback)
       return true
     elseif char and char >= 32 and char ~= 127 then
       inputLine = inputLine .. uchar(char)
-      return true
-    end
-    return false
-  end
-  return win
-end
-
-local function webminApp()
-  local win = newWindow(T.mWebMin, nil, false)
-  local url = "https://api.github.com"
-  local statusText = "Pronto para teste HTTPS."
-
-  win.body = function(self)
-    local ix, iw = self.x + 2, self.w - 4
-    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
-    put(ix, self.y + 2, "WEBMIN - HTTPS SEGURO", C.accent, C.panel)
-    put(ix, self.y + 4, "URL: " .. url, C.dim, C.panel, iw)
-    put(ix, self.y + 6, statusText, C.text, C.panel, iw)
-    put(ix, self.y + self.h - 3, "[Pressione Enter para testar]", C.ok, C.panel)
-  end
-
-  win.onKey = function(self, char, code)
-    if code == 28 then
-      statusText = "A contactar via HTTPS..."
-      win.body(win)
-      local internet = cl.list("internet")()
-      if not internet then
-        statusText = "Erro: Sem Internet Card"
-      else
-        local handle, err = cl.invoke(internet, "request", url)
-        if handle then
-          local codeHttp = nil
-          local limit = cp.uptime() + 5
-          repeat
-            local success = pcall(function() codeHttp = handle.response() end)
-            if success and codeHttp then break end
-            cp.pullSignal(0.1)
-          until cp.uptime() > limit
-          pcall(cl.invoke, handle, "close")
-          if codeHttp and codeHttp < 400 then statusText = "Sucesso HTTPS! Código: " .. codeHttp
-          else statusText = "Falha HTTP: " .. tostring(codeHttp or err) end
-        else statusText = "Falha de conexão: " .. tostring(err) end
-      end
       return true
     end
     return false
