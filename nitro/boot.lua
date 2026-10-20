@@ -1,5 +1,5 @@
 -- Nitro OS - /nitro/boot.lua
--- Sistema Operacional para OpenComputers com WebMin em formato Dashboard, Painel de Configurações, AppStore e Gestor de Arquivos.
+-- Sistema Operacional para OpenComputers com Correção de Escopo de Janelas, WebMin Dashboard e Configurações.
 
 local cl, cp = component, computer
 local gpu = cl.proxy(cl.list("gpu")())
@@ -559,6 +559,48 @@ local function drawBox(x, y, bw, bh, title)
   if title then put(x + 2, y, " " .. title .. " ", C.text, C.panel, bw - 12) end
 end
 
+---------------------------------------------------------------- motor de janelas (Declarado antes dos Apps)
+local function newWindow(title, body, live)
+  local ww = math.min(w - 4, 60)
+  local wh = math.min(h - 3, 18)
+  return {
+    title = title, body = body, live = live, w = ww, h = wh,
+    x = math.floor((w - ww) / 2) + 1,
+    y = math.max(2, math.floor((h - 1 - wh) / 2) + 1),
+    origW = ww, origH = wh, origX = math.floor((w - ww) / 2) + 1, origY = math.max(2, math.floor((h - 1 - wh) / 2) + 1),
+    maximized = false, minimized = false
+  }
+end
+
+local function drawWindow(win)
+  if win.minimized then return end
+  drawBox(win.x, win.y, win.w, win.h, win.title)
+  put(win.x + win.w - 10, win.y, "[_][o][X]", C.text, C.panel)
+  win.body(win)
+end
+
+local function handleWindowControls(win, x, y)
+  if y == win.y then
+    if x >= win.x + win.w - 10 and x <= win.x + win.w - 8 then
+      win.minimized = true
+      return "minimize"
+    elseif x >= win.x + win.w - 7 and x <= win.x + win.w - 5 then
+      if win.maximized then
+        win.x, win.y, win.w, win.h = win.origX, win.origY, win.origW, win.origH
+        win.maximized = false
+      else
+        win.origX, win.origY, win.origW, win.origH = win.x, win.y, win.w, win.h
+        win.x, win.y, win.w, win.h = 1, 1, w, h - 1
+        win.maximized = true
+      end
+      return "maximize"
+    elseif x >= win.x + win.w - 4 and x <= win.x + win.w - 2 then
+      return "close"
+    end
+  end
+  return nil
+end
+
 ---------------------------------------------------------------- rede / WebMin Dashboard GUI
 local NET_TEST = "https://raw.githubusercontent.com/pmiguel10766-stack/nitro-appstore/main/files.txt"
 
@@ -617,6 +659,48 @@ local function netTest()
   return true, string.format("%d ms", math.floor((cp.uptime() - t0) * 1000))
 end
 
+local function wifiApp()
+  local win = { title = T.wifi, w = 40, h = 10 }
+  win.x = math.floor((w - win.w) / 2) + 1
+  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
+  local ix, iw = win.x + 2, win.w - 4
+  local testY = win.y + 6
+  local result, resultColor = "", C.dim
+
+  win.body = function(self)
+    local info = netInfo()
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(ix, self.y + 2, T.wifiType .. ":", C.dim, C.panel)
+    for i, name in ipairs(info.types) do
+      put(ix + 9, self.y + 1 + i, name, C.text, C.panel, iw - 9)
+    end
+    put(ix, self.y + 4, T.wifiStatus .. ":", C.dim, C.panel)
+    put(ix + 9, self.y + 4, info.state == "ok" and T.wifiOk or T.wifiWarn, C.ok, C.panel)
+    if result ~= "" then put(ix, self.y + 5, result, resultColor, C.panel, iw) end
+    rect(ix, testY, ulen(T.wifiTest) + 2, 1, C.accent)
+    put(ix + 1, testY, T.wifiTest, C.bg, C.accent)
+  end
+
+  win.onTouch = function(self, x, y)
+    if y == testY and x >= ix and x < ix + ulen(T.wifiTest) + 2 then
+      result, resultColor = T.wifiTesting, C.dim
+      win.body(win)
+      local ok, msg = netTest()
+      if ok then result, resultColor = string.format(T.wifiTestOk, msg), C.ok
+      else result, resultColor = string.format(T.wifiTestFail, msg), C.err end
+      return true
+    end
+    return false
+  end
+
+  win.onKey = function(self, char, code)
+    if code == 28 then return true end
+    return false
+  end
+
+  return win
+end
+
 local function webminApp()
   local win = newWindow(T.mWebMin, nil, false)
   win.w, win.h = 56, 15
@@ -626,23 +710,14 @@ local function webminApp()
   win.body = function(self)
     local ix, iw = self.x + 2, self.w - 4
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
-    
-    -- Logotipo do Dashboard WebMin
     put(ix + math.floor((iw - 12)/2), self.y + 2, "◆ WebMin", C.accent, C.panel)
-    
-    -- Barra de pesquisa estilo Dashboard
     rect(ix, self.y + 4, iw, 1, C.barbg)
     put(ix + 1, self.y + 4, "🔍 " .. (searchQuery == "" and "Pesquise módulos e configurações..." or searchQuery), C.dim, C.barbg, iw - 2)
-
     put(ix, self.y + 7, "Estado: " .. statusText, C.text, C.panel, iw)
-    
-    -- Botões de Acesso Rápido
     rect(ix, self.y + 10, 18, 1, C.accent)
     put(ix + 1, self.y + 10, "Login no Dashboard", C.bg, C.accent)
-
     rect(ix + 20, self.y + 10, 18, 1, C.barbg)
     put(ix + 21, self.y + 10, "Acessar Tutoriais", C.text, C.barbg)
-
     put(ix, self.y + self.h - 3, "[Pressione Enter para testar HTTPS]", C.ok, C.panel)
   end
 
@@ -675,7 +750,7 @@ local function webminApp()
   return win
 end
 
----------------------------------------------------------------- janelas e tarefas
+---------------------------------------------------------------- tarefas e barra
 local wifiBox = { x = 0, w = 4 }
 local MENU_BTN = " ◆ Nitro "
 local MENU_W = 28
@@ -715,47 +790,6 @@ local function drawMenu(items)
       put(mx + 2, y, it.label, it.color or C.text, C.panel, mw - 4)
     end
   end
-end
-
-local function newWindow(title, body, live)
-  local ww = math.min(w - 4, 60)
-  local wh = math.min(h - 3, 18)
-  return {
-    title = title, body = body, live = live, w = ww, h = wh,
-    x = math.floor((w - ww) / 2) + 1,
-    y = math.max(2, math.floor((h - 1 - wh) / 2) + 1),
-    origW = ww, origH = wh, origX = math.floor((w - ww) / 2) + 1, origY = math.max(2, math.floor((h - 1 - wh) / 2) + 1),
-    maximized = false, minimized = false
-  }
-end
-
-local function drawWindow(win)
-  if win.minimized then return end
-  drawBox(win.x, win.y, win.w, win.h, win.title)
-  put(win.x + win.w - 10, win.y, "[_][o][X]", C.text, C.panel)
-  win.body(win)
-end
-
-local function handleWindowControls(win, x, y)
-  if y == win.y then
-    if x >= win.x + win.w - 10 and x <= win.x + win.w - 8 then
-      win.minimized = true
-      return "minimize"
-    elseif x >= win.x + win.w - 7 and x <= win.x + win.w - 5 then
-      if win.maximized then
-        win.x, win.y, win.w, win.h = win.origX, win.origY, win.origW, win.origH
-        win.maximized = false
-      else
-        win.origX, win.origY, win.origW, win.origH = win.x, win.y, win.w, win.h
-        win.x, win.y, win.w, win.h = 1, 1, w, h - 1
-        win.maximized = true
-      end
-      return "maximize"
-    elseif x >= win.x + win.w - 4 and x <= win.x + win.w - 2 then
-      return "close"
-    end
-  end
-  return nil
 end
 
 local function monitorBody(win)
