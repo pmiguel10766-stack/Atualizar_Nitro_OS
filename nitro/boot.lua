@@ -164,7 +164,7 @@ end
 
 -- atualiza so o texto e a barra de carregamento
 local function bootProgress(pct, text)
-  local label = string.format("[%s %d%%]", T.loaded, pct)
+    local label = string.format("[%s %d%%]", (T and T.loaded) or "Loaded", pct)
   rect(1, bootBar.y - 1, w, 1, C.bg)
   put(math.floor((w - ulen(label)) / 2) + 1, bootBar.y - 1, label, C.text, C.bg)
   rect(bootBar.x, bootBar.y, bootBar.w, 1, C.barbg)
