@@ -13,6 +13,19 @@ local uchar = (unicode and unicode.char) or string.char
 
 local fs = cl.proxy(cp.getBootAddress())
 local CONFIG = "/nitro/config.lua"
+local VERSION = "1.3"
+
+-- edicao instalada: "pro" (completa) ou "go" (leve). O instalador grava /nitro/edition.
+local function detectEdition()
+  local hnd = fs.open("/nitro/edition")
+  if not hnd then return "pro" end
+  local data = fs.read(hnd, 16) or ""
+  fs.close(hnd)
+  return data:match("%a+") or "pro"
+end
+
+local EDITION = detectEdition()
+local GO = (EDITION == "go")
 
 ---------------------------------------------------------------- cores e desenho
 local C = {
@@ -164,7 +177,7 @@ end
 
 -- atualiza so o texto e a barra de carregamento
 local function bootProgress(pct, text)
-    local label = string.format("[%s %d%%]", (T and T.loaded) or "Loaded", pct)
+  local label = string.format("[Carregado %d%%]", pct)
   rect(1, bootBar.y - 1, w, 1, C.bg)
   put(math.floor((w - ulen(label)) / 2) + 1, bootBar.y - 1, label, C.text, C.bg)
   rect(bootBar.x, bootBar.y, bootBar.w, 1, C.barbg)
@@ -316,8 +329,55 @@ local langs = {
     sTestNet = "Testar internet",
     sTesting = "Testando...",
     sTitle = "CONFIGURAÇÕES",
-    sVersion = "Versão 1.2",
+    sVersion = "Versão %s",
     sFor = "Para OpenComputers",
+    sEdition = "Edição",
+    sUpdate = "Atualizar Nitro OS",
+    sWallpaper = "Trocar fundo",
+    uTitle = "Atualizar Nitro OS",
+    uInstalled = "Versão instalada",
+    uOnline = "Versão no GitHub",
+    uCheck = "Verificar atualização",
+    uNow = "Atualizar agora",
+    uRestart = "Reiniciar",
+    uChecking = "Verificando...",
+    uUpToDate = "Seu Nitro OS está atualizado",
+    uAvailable = "Atualização disponível!",
+    uDownloading = "Baixando %d/%d: %s",
+    uApplying = "Aplicando a atualização...",
+    uDone = "Atualizado! Reinicie o computador",
+    uFail = "Falhou: %s",
+    uBadManifest = "NitroOS_atualizar.lua inválido",
+    uLowRam = "Pouca RAM livre para atualizar",
+    wTitle = "Trocar fundo",
+    wDefault = "Padrão (logo Nitro)",
+    wNone = "Preto (sem imagem)",
+    wImage = "Imagem",
+    wVideo = "Vídeo (quadros)",
+    wApplied = "Fundo aplicado",
+    wHint = "Clique ou Enter para aplicar",
+    mGitDown = "GitDown",
+    gUrl = "Link do GitHub (cole com o botão do meio):",
+    gDownload = "Baixar",
+    gOpenFolder = "Pasta",
+    gRun = "Executar",
+    gRunSafe = "Restrito",
+    gBadUrl = "Link inválido (use um link do GitHub)",
+    gDownloading = "Baixando... %d KB",
+    gSaved = "Salvo em %s",
+    gEmpty = "(pasta /Download vazia)",
+    gNeedLua = "Só arquivos .lua podem ser executados",
+    gWarn1 = "ATENÇÃO: este modo tem acesso TOTAL ao computador.",
+    gWarn2 = "Só execute arquivos em que você confia.",
+    gRunAnyway = "Executar mesmo assim",
+    gOutput = "Resultado de %s",
+    gDelAsk = "Excluir %s? Não dá para desfazer [S/N]",
+    gFail = "Falhou: %s",
+    gTooBig = "Arquivo grande demais (máx. 128 KB)",
+    gNoOutput = "(terminou sem mostrar nada)",
+    gRunErr = "Erro: %s",
+    gSafeNote = "Restrito: sem acesso ao computador",
+    gBack = "Voltar",
   } },
   { name = "English", t = {
     steps = { "Language", "User", "Password" },
@@ -462,8 +522,55 @@ local langs = {
     sTestNet = "Test internet",
     sTesting = "Testing...",
     sTitle = "SETTINGS",
-    sVersion = "Version 1.2",
+    sVersion = "Version %s",
     sFor = "For OpenComputers",
+    sEdition = "Edition",
+    sUpdate = "Update Nitro OS",
+    sWallpaper = "Change wallpaper",
+    uTitle = "Update Nitro OS",
+    uInstalled = "Installed version",
+    uOnline = "Version on GitHub",
+    uCheck = "Check for updates",
+    uNow = "Update now",
+    uRestart = "Restart",
+    uChecking = "Checking...",
+    uUpToDate = "Your Nitro OS is up to date",
+    uAvailable = "Update available!",
+    uDownloading = "Downloading %d/%d: %s",
+    uApplying = "Applying the update...",
+    uDone = "Updated! Restart the computer",
+    uFail = "Failed: %s",
+    uBadManifest = "NitroOS_atualizar.lua is invalid",
+    uLowRam = "Not enough free RAM to update",
+    wTitle = "Change wallpaper",
+    wDefault = "Default (Nitro logo)",
+    wNone = "Black (no image)",
+    wImage = "Image",
+    wVideo = "Video (frames)",
+    wApplied = "Wallpaper applied",
+    wHint = "Click or Enter to apply",
+    mGitDown = "GitDown",
+    gUrl = "GitHub link (paste with middle click):",
+    gDownload = "Download",
+    gOpenFolder = "Folder",
+    gRun = "Run",
+    gRunSafe = "Restricted",
+    gBadUrl = "Invalid link (use a GitHub link)",
+    gDownloading = "Downloading... %d KB",
+    gSaved = "Saved to %s",
+    gEmpty = "(/Download folder is empty)",
+    gNeedLua = "Only .lua files can be run",
+    gWarn1 = "WARNING: this mode has FULL access to the computer.",
+    gWarn2 = "Only run files you trust.",
+    gRunAnyway = "Run anyway",
+    gOutput = "Result of %s",
+    gDelAsk = "Delete %s? This cannot be undone [Y/N]",
+    gFail = "Failed: %s",
+    gTooBig = "File too large (max. 128 KB)",
+    gNoOutput = "(finished without output)",
+    gRunErr = "Error: %s",
+    gSafeNote = "Restricted: no access to the computer",
+    gBack = "Back",
   } },
 }
 
@@ -594,8 +701,8 @@ local function saveConfig(cfg)
   fs.makeDirectory("/nitro")
   local hnd = fs.open(CONFIG, "w")
   local hashText = cfg.hash and string.format("%q", cfg.hash) or "nil"
-  fs.write(hnd, string.format("return {user=%q,lang=%d,hash=%s,theme=%q}",
-    cfg.user, cfg.lang, hashText, cfg.theme or "red"))
+  fs.write(hnd, string.format("return {user=%q,lang=%d,hash=%s,theme=%q,wallpaper=%q}",
+    cfg.user, cfg.lang, hashText, cfg.theme or "red", cfg.wallpaper or "default"))
   fs.close(hnd)
 end
 
@@ -942,6 +1049,7 @@ end
 
 ---------------------------------------------------------------- barra de tarefas e menu
 local wifiBox = { x = 0, w = 4 }
+local netCache, netCacheT = nil, 0
 local MENU_BTN = " ◆ Nitro "
 local MENU_W = 26
 
@@ -955,7 +1063,17 @@ local function drawTaskbar(cfg, menuOpen)
   local right = cfg.user .. "  " .. clock()
   put(w - ulen(right), h, right, C.text, C.panel)
 
-  local bars, suffix, barColor, sufColor = wifiGlyph(netInfo())
+  local info
+  if GO then
+    if not netCache or cp.uptime() - netCacheT > 10 then
+      netCache = netInfo()
+      netCacheT = cp.uptime()
+    end
+    info = netCache
+  else
+    info = netInfo()
+  end
+  local bars, suffix, barColor, sufColor = wifiGlyph(info)
   wifiBox.x = w - ulen(right) - 5
   put(wifiBox.x, h, bars, barColor, C.panel)
   put(wifiBox.x + 3, h, suffix, sufColor, C.panel)
@@ -1076,7 +1194,7 @@ local function readPreview(path)
   return data
 end
 
-local function filesApp()
+local function filesApp(startDir)
   local win = {
     title = T.mFiles,
     w = math.min(w - 2, 60),
@@ -1091,7 +1209,7 @@ local function filesApp()
   local statusY = win.y + win.h - 3
 
   local st = {
-    dir = "/", items = {}, sel = 1, first = 1, mode = "list",
+    dir = startDir or "/", items = {}, sel = 1, first = 1, mode = "list",
     msg = "", msgColor = C.warn, input = "", lines = {}, vfirst = 1,
     viewName = "", lastClick = 0,
   }
@@ -2459,14 +2577,22 @@ local function settingsApp(cfg, shared)
   end
 
   local function entries()
-    return {
+    local all = {
       { id = "lang", label = T.sLang, value = langs[cfg.lang].name },
       { id = "theme", label = T.sTheme, value = T[THEMES[themeIndex(cfg.theme)].key] },
       { id = "user", label = T.sUser, value = cfg.user },
       { id = "pass", label = T.sPass, value = cfg.hash and T.sPassOn or T.sPassNone },
       { id = "status", label = T.sStatus, value = "" },
+      { id = "update", label = T.sUpdate, value = VERSION },
+      { id = "wallpaper", label = T.sWallpaper, value = "" },
       { id = "about", label = T.sAbout, value = "" },
     }
+    if not GO then return all end
+    local out = {}
+    for _, e in ipairs(all) do
+      if e.id ~= "wallpaper" then out[#out + 1] = e end
+    end
+    return out
   end
 
   local function startPrompt(flow)
@@ -2562,6 +2688,10 @@ local function settingsApp(cfg, shared)
     elseif id == "status" then
       st.mode = "status"
       st.result = ""
+    elseif id == "update" then
+      shared.open = "update"
+    elseif id == "wallpaper" then
+      shared.open = "wallpaper"
     elseif id == "about" then
       st.mode = "about"
     end
@@ -2630,8 +2760,9 @@ local function settingsApp(cfg, shared)
 
     elseif st.mode == "about" then
       put(ix, self.y + 4, "Nitro OS", C.text, C.panel, iw)
-      put(ix, self.y + 6, T.sVersion, C.dim, C.panel, iw)
+      put(ix, self.y + 6, string.format(T.sVersion, VERSION), C.dim, C.panel, iw)
       put(ix, self.y + 7, T.sFor, C.dim, C.panel, iw)
+      put(ix, self.y + 8, T.sEdition .. ": " .. (GO and "Go" or "Pro"), C.dim, C.panel, iw)
       drawButtons(curButtons(), bottomY)
     end
   end
@@ -2703,6 +2834,823 @@ local function settingsApp(cfg, shared)
   return win
 end
 
+---------------------------------------------------------------- download HTTP e app Atualizar
+local UPDATE_BASE = "https://raw.githubusercontent.com/pmiguel10766-stack/Atualizar_Nitro_OS/main/"
+local UPDATE_MANIFEST = "NitroOS_atualizar.lua"
+
+local function httpGet(url, timeout)
+  local addr = cl.list("internet")()
+  if not addr then return nil, T.wifiNoCard end
+  local net = cl.proxy(addr)
+  local req, err = net.request(url)
+  if not req then return nil, tostring(err) end
+  local limit = cp.uptime() + (timeout or 20)
+  local data = ""
+  local ok, e = pcall(function()
+    while not req.finishConnect() do
+      if cp.uptime() > limit then error("timeout", 0) end
+      cp.pullSignal(0)
+    end
+    local code = req.response()
+    if code and code >= 400 then error("HTTP " .. code, 0) end
+    while true do
+      local chunk = req.read(math.huge)
+      if not chunk then break end
+      data = data .. chunk
+    end
+  end)
+  pcall(req.close)
+  if not ok then return nil, tostring(e) end
+  return data
+end
+
+-- o manifesto e so dados (versao + lista de arquivos): roda sem acesso a nada do sistema
+local function parseManifest(data)
+  local f = load(data, "=update", "t", {})
+  if not f then return nil end
+  local ok, m = pcall(f)
+  if not ok or type(m) ~= "table" then return nil end
+  if type(m.version) ~= "string" or type(m.files) ~= "table" then return nil end
+  if #m.files == 0 or #m.files > 40 then return nil end
+  for _, path in ipairs(m.files) do
+    if type(path) ~= "string" or path:find("..", 1, true) or path:sub(1, 1) == "/"
+        or not path:match("^[%w_%-%./]+$") then
+      return nil
+    end
+  end
+  return m
+end
+
+local function updateApp()
+  local win = { title = T.uTitle }
+  setWinGeom(win, 54, 13)
+  local ix, iw = win.x + 2, win.w - 4
+  local btnY = win.y + 9
+  local st = { phase = "idle", manifest = nil, msg = "", msgColor = C.dim, pct = 0 }
+
+  local function setStatus(text, color)
+    st.msg, st.msgColor = text, color or C.dim
+  end
+
+  local function failWith(text)
+    st.phase = "fail"
+    setStatus(string.format(T.uFail, text), C.err)
+  end
+
+  local function doCheck()
+    st.phase = "working"
+    st.pct = 0
+    setStatus(T.uChecking, C.dim)
+    win.body(win)
+    local data, err = httpGet(UPDATE_BASE .. UPDATE_MANIFEST, 15)
+    if not data then
+      failWith(tostring(err))
+      return
+    end
+    local m = parseManifest(data)
+    if not m then
+      st.phase = "fail"
+      setStatus(T.uBadManifest, C.err)
+      return
+    end
+    st.manifest = m
+    if m.version == VERSION then
+      st.phase = "uptodate"
+      setStatus(T.uUpToDate, C.ok)
+    else
+      st.phase = "ready"
+      setStatus(T.uAvailable, C.warn)
+    end
+  end
+
+  local function removeNew(files)
+    for _, path in ipairs(files) do pcall(fs.remove, "/" .. path .. ".new") end
+  end
+
+  local function rollback(swapped)
+    for _, path in ipairs(swapped) do
+      local target = "/" .. path
+      if fs.exists(target .. ".bak") then
+        pcall(fs.remove, target)
+        pcall(fs.rename, target .. ".bak", target)
+      end
+    end
+  end
+
+  local function checkFile(path, data)
+    if #data == 0 or data:sub(1, 3) == "404" then return "vazio/404" end
+    if path:sub(-4) == ".lua" and not load(data, "=" .. path) then return "codigo invalido" end
+    return nil
+  end
+
+  local function doUpdate()
+    local m = st.manifest
+    if not m then return end
+    if cp.freeMemory() < 40000 then
+      st.phase = "fail"
+      setStatus(T.uLowRam, C.err)
+      return
+    end
+    st.phase = "working"
+    local files = m.files
+    local total = #files
+
+    -- fase 1: baixa e confere tudo em arquivos .new (o sistema atual nao e tocado)
+    for i, path in ipairs(files) do
+      st.pct = math.floor((i - 1) * 80 / total)
+      setStatus(string.format(T.uDownloading, i, total, path), C.dim)
+      win.body(win)
+      local data, err = httpGet(UPDATE_BASE .. path, 25)
+      if not data then
+        removeNew(files)
+        failWith(path .. ": " .. tostring(err))
+        return
+      end
+      local bad = checkFile(path, data)
+      if bad then
+        removeNew(files)
+        failWith(path .. ": " .. bad)
+        return
+      end
+      local dir = path:match("^(.*)/[^/]+$")
+      if dir then fs.makeDirectory("/" .. dir) end
+      local hnd = fs.open("/" .. path .. ".new", "w")
+      if not hnd then
+        removeNew(files)
+        failWith(path .. ": gravar")
+        return
+      end
+      fs.write(hnd, data)
+      fs.close(hnd)
+    end
+
+    -- fase 2: troca os arquivos (guarda .bak e desfaz tudo se algo falhar)
+    setStatus(T.uApplying, C.dim)
+    local swapped = {}
+    for i, path in ipairs(files) do
+      st.pct = 80 + math.floor(i * 20 / total)
+      win.body(win)
+      local target = "/" .. path
+      if fs.exists(target) then
+        pcall(fs.remove, target .. ".bak")
+        pcall(fs.rename, target, target .. ".bak")
+      end
+      pcall(fs.rename, target .. ".new", target)
+      if not fs.exists(target) then
+        if fs.exists(target .. ".bak") then pcall(fs.rename, target .. ".bak", target) end
+        rollback(swapped)
+        removeNew(files)
+        failWith(path .. ": trocar")
+        return
+      end
+      swapped[#swapped + 1] = path
+    end
+    st.pct = 100
+    st.phase = "done"
+    setStatus(T.uDone, C.ok)
+  end
+
+  local function curButtons()
+    if st.phase == "working" then return {} end
+    if st.phase == "ready" then
+      return makeButtons(ix, {
+        { "update", T.uNow, C.ok }, { "check", T.uCheck },
+      })
+    elseif st.phase == "done" then
+      return makeButtons(ix, { { "restart", T.uRestart, C.ok } })
+    end
+    return makeButtons(ix, { { "check", T.uCheck } })
+  end
+
+  win.body = function(self)
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(ix, self.y + 2, T.uInstalled .. ": " .. VERSION, C.text, C.panel, iw)
+    local online = st.manifest and st.manifest.version or "-"
+    put(ix, self.y + 3, T.uOnline .. ": " .. online, C.text, C.panel, iw)
+    if st.msg ~= "" then put(ix, self.y + 5, st.msg, st.msgColor, C.panel, iw) end
+    if st.phase == "working" or st.phase == "done" then
+      rect(ix, self.y + 7, iw, 1, C.barbg)
+      rect(ix, self.y + 7, math.floor(iw * st.pct / 100), 1, C.accent)
+    end
+    drawButtons(curButtons(), btnY)
+  end
+
+  local function act(id)
+    if id == "check" then
+      doCheck()
+    elseif id == "update" then
+      doUpdate()
+    elseif id == "restart" then
+      cp.shutdown(true)
+    end
+  end
+
+  win.onTouch = function(self, x, y)
+    if y ~= btnY then return false end
+    local id = hitButton(curButtons(), x)
+    if not id then return false end
+    act(id)
+    return true
+  end
+
+  win.onKey = function(self, char, code)
+    if code == 28 then
+      local list = curButtons()
+      if list[1] then act(list[1].id) end
+      return true
+    end
+    return false
+  end
+
+  win.canClose = function(self)
+    return st.phase ~= "working"
+  end
+
+  return win
+end
+
+---------------------------------------------------------------- fundos (imagens e video em quadros)
+local WALL_DIR = "/nitro/fundo_imagens"
+
+local function loadWallFile(name)
+  local path = WALL_DIR .. "/" .. name .. ".lua"
+  if not fs.exists(path) then return nil end
+  local data = readFile(path)
+  local f = data and load(data, "=" .. name, "t", {})
+  if not f then return nil end
+  local ok, t = pcall(f)
+  if ok and type(t) == "table" then return t end
+  return nil
+end
+
+-- cada celula mostra 2 "pixels" (um em cima, outro embaixo) usando o bloco ▀
+local function drawPixels(rows, palette, ox, oy, areaW, areaH)
+  local cols = 0
+  for _, r in ipairs(rows) do
+    if #r > cols then cols = #r end
+  end
+  local cellRows = math.ceil(#rows / 2)
+  local drawW = math.min(cols, areaW)
+  local drawH = math.min(cellRows, areaH)
+  local x0 = ox + math.floor((areaW - drawW) / 2)
+  local y0 = oy + math.floor((areaH - drawH) / 2)
+  for cy = 1, drawH do
+    local top = rows[cy * 2 - 1] or ""
+    local bot = rows[cy * 2] or ""
+    local runX, runFg, runBg, runLen = 0, nil, nil, 0
+    for cx = 1, drawW + 1 do
+      local fg, bg
+      if cx <= drawW then
+        fg = palette[top:sub(cx, cx)] or C.bg
+        bg = palette[bot:sub(cx, cx)] or C.bg
+      end
+      if fg ~= nil and fg == runFg and bg == runBg then
+        runLen = runLen + 1
+      else
+        if runLen > 0 then
+          gpu.setForeground(runFg)
+          gpu.setBackground(runBg)
+          gpu.set(x0 + runX, y0 + cy - 1, string.rep("▀", runLen))
+        end
+        runX, runFg, runBg, runLen = cx - 1, fg, bg, (fg ~= nil) and 1 or 0
+      end
+    end
+  end
+end
+
+local function drawWallpaper(wall)
+  if wall.kind == "none" then return end
+  local data = wall.data
+  local rows = (wall.kind == "video") and data.frames[wall.frame] or data.rows
+  if type(rows) ~= "table" then return end
+  drawPixels(rows, data.palette or {}, 1, 1, w, h - 1)
+end
+
+local function wallpaperApp(cfg, shared)
+  local win = { title = T.wTitle }
+  setWinGeom(win, 52, 14)
+  local ix, iw = win.x + 2, win.w - 4
+  local listY = win.y + 3
+  local rows = win.h - 7
+  local statusY = win.y + win.h - 3
+  local options = {
+    { id = "default", label = T.wDefault },
+    { id = "none", label = T.wNone },
+  }
+  local okList, names = pcall(fs.list, WALL_DIR)
+  if okList and type(names) == "table" then
+    table.sort(names)
+    for _, n in ipairs(names) do
+      if n:sub(-4) == ".lua" then
+        local name = n:sub(1, -5)
+        local data = loadWallFile(name)
+        if data then
+          local kind = data.frames and T.wVideo or T.wImage
+          options[#options + 1] = { id = "file:" .. name, label = kind .. ": " .. tostring(data.name or name) }
+        end
+      end
+    end
+  end
+
+  local st = { sel = 1, first = 1, msg = "" }
+  local current = cfg.wallpaper or "default"
+  for i, o in ipairs(options) do
+    if o.id == current then st.sel = i end
+  end
+
+  local function keepVisible()
+    if st.sel < st.first then st.first = st.sel end
+    if st.sel >= st.first + rows then st.first = st.sel - rows + 1 end
+  end
+  keepVisible()
+
+  local function apply()
+    local o = options[st.sel]
+    if not o then return end
+    cfg.wallpaper = o.id
+    saveConfig(cfg)
+    if shared.applyWallpaper then shared.applyWallpaper(o.id) end
+    shared.refresh = true
+    st.msg = T.wApplied
+  end
+
+  win.body = function(self)
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(ix, self.y + 1, WALL_DIR, C.dim, C.panel, iw)
+    for n = 0, rows - 1 do
+      local o = options[st.first + n]
+      if o then
+        local y = listY + n
+        local isSel = (st.first + n == st.sel)
+        local isCur = (o.id == (cfg.wallpaper or "default"))
+        local bg = isSel and C.accent or C.panel
+        rect(ix - 1, y, iw + 2, 1, bg)
+        put(ix, y, (isCur and "● " or "  ") .. o.label, isSel and C.bg or C.text, bg, iw)
+      end
+    end
+    if st.msg ~= "" then
+      put(ix, statusY, st.msg, C.ok, C.panel, iw)
+    else
+      put(ix, statusY, T.wHint, C.dim, C.panel, iw)
+    end
+  end
+
+  win.onTouch = function(self, x, y)
+    if y >= listY and y < listY + rows then
+      local idx = st.first + (y - listY)
+      if options[idx] then
+        st.sel = idx
+        apply()
+        return true
+      end
+    end
+    return false
+  end
+
+  win.onKey = function(self, char, code)
+    if code == 200 and st.sel > 1 then
+      st.sel = st.sel - 1
+      keepVisible()
+      st.msg = ""
+      return true
+    elseif code == 208 and st.sel < #options then
+      st.sel = st.sel + 1
+      keepVisible()
+      st.msg = ""
+      return true
+    elseif code == 28 then
+      apply()
+      return true
+    end
+    return false
+  end
+
+  return win
+end
+
+---------------------------------------------------------------- app GitDown
+local DOWNLOAD_DIR = "/Download"
+local GIT_MAX = 131072
+
+-- troca links normais do GitHub (blob) pelo link "raw" que entrega o arquivo puro
+local function normalizeGithubUrl(u)
+  u = u:match("^%s*(.-)%s*$")
+  local host, rest = u:match("^https?://([^/]+)/(.+)$")
+  if not host then return nil end
+  host = host:lower()
+  rest = rest:gsub("[?#].*$", "")
+  if host == "raw.githubusercontent.com" then
+    return "https://" .. host .. "/" .. rest
+  end
+  if host == "github.com" or host == "www.github.com" then
+    local user, repo, kind, tail = rest:match("^([^/]+)/([^/]+)/(%a+)/(.+)$")
+    if user and (kind == "blob" or kind == "raw") then
+      tail = tail:gsub("^refs/heads/", "")
+      return "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/" .. tail
+    end
+  end
+  return nil
+end
+
+local function httpDownload(url, timeout, onProgress)
+  local addr = cl.list("internet")()
+  if not addr then return nil, T.wifiNoCard end
+  local net = cl.proxy(addr)
+  local req, err = net.request(url)
+  if not req then return nil, tostring(err) end
+  local limit = cp.uptime() + (timeout or 20)
+  local parts, size = {}, 0
+  local ok, e = pcall(function()
+    while not req.finishConnect() do
+      if cp.uptime() > limit then error("timeout", 0) end
+      cp.pullSignal(0)
+    end
+    local code = req.response()
+    if code and code >= 400 then error("HTTP " .. code, 0) end
+    while true do
+      local chunk = req.read(math.huge)
+      if not chunk then break end
+      parts[#parts + 1] = chunk
+      size = size + #chunk
+      if size > GIT_MAX then error("TOOBIG", 0) end
+      if onProgress then onProgress(size) end
+    end
+  end)
+  pcall(req.close)
+  if not ok then
+    if tostring(e) == "TOOBIG" then return nil, T.gTooBig end
+    return nil, tostring(e)
+  end
+  return table.concat(parts)
+end
+
+local function copyTable(t)
+  local out = {}
+  for k, v in pairs(t) do out[k] = v end
+  return out
+end
+
+-- restricted = true: so matematica, texto e tabelas (sem component, computer, os, io, load...)
+local function makeEnv(restricted, out)
+  local function capture(...)
+    local parts = {}
+    for i = 1, select("#", ...) do parts[#parts + 1] = tostring((select(i, ...))) end
+    if #out < 200 then out[#out + 1] = table.concat(parts, "  ") end
+  end
+  if not restricted then
+    return setmetatable({ print = capture }, { __index = _G })
+  end
+  local env = { print = capture, _VERSION = _VERSION }
+  for _, name in ipairs({ "assert", "error", "ipairs", "next", "pairs", "select", "tonumber", "tostring", "type" }) do
+    env[name] = _G[name]
+  end
+  env.math = copyTable(math)
+  env.table = copyTable(table)
+  env.string = copyTable(string)
+  local realRep = string.rep
+  env.string.rep = function(s, n, sep)
+    if #tostring(s) * (tonumber(n) or 0) > 65536 then error("string.rep limitado", 0) end
+    return realRep(s, n, sep)
+  end
+  env.unpack = table.unpack or unpack
+  return env
+end
+
+local function runLuaFile(path, restricted)
+  local out = {}
+  local data = readFile(path)
+  if not data then return out, "nao foi possivel ler o arquivo" end
+  local chunkName = path:match("([^/]+)$") or "arquivo"
+  local fn, err = load(data, "=" .. chunkName, "t", makeEnv(restricted, out))
+  if not fn then return out, tostring(err) end
+  local deadline = cp.uptime() + 5
+  local hooked = false
+  if restricted and debug and debug.sethook then
+    debug.sethook(function()
+      if cp.uptime() > deadline then error("tempo esgotado (5 s)", 0) end
+    end, "", 100000)
+    hooked = true
+  end
+  local ok, e = pcall(fn)
+  if hooked then debug.sethook() end
+  if not ok then return out, tostring(e) end
+  return out, nil
+end
+
+local function gitdownApp(shared)
+  local win = { title = T.mGitDown }
+  setWinGeom(win, 60, 16)
+  local ix, iw = win.x + 2, win.w - 4
+  local urlY, btnA, btnB, listY = win.y + 2, win.y + 3, win.y + 4, win.y + 6
+  local rows = win.h - 11
+  local statusY = win.y + win.h - 3
+  local st = {
+    mode = "main", url = "", files = {}, sel = 1, first = 1,
+    msg = "", msgColor = C.dim, outLines = {}, outErr = nil, outTitle = "", vfirst = 1,
+  }
+
+  local function setMsg(text, color)
+    st.msg, st.msgColor = text, color or C.dim
+  end
+
+  local function keepVisible()
+    if st.sel > #st.files then st.sel = #st.files end
+    if st.sel < 1 then st.sel = 1 end
+    if st.sel < st.first then st.first = st.sel end
+    if st.sel >= st.first + rows then st.first = st.sel - rows + 1 end
+  end
+
+  local function reload(select)
+    st.files = {}
+    local ok, names = pcall(fs.list, DOWNLOAD_DIR)
+    if ok and type(names) == "table" then
+      for _, n in ipairs(names) do
+        if n:sub(-1) ~= "/" then
+          local path = DOWNLOAD_DIR .. "/" .. n
+          st.files[#st.files + 1] = { name = n, path = path, size = fs.size(path) }
+        end
+      end
+    end
+    table.sort(st.files, function(p, q) return p.name:lower() < q.name:lower() end)
+    st.sel, st.first = 1, 1
+    if select then
+      for i, f in ipairs(st.files) do
+        if f.name == select then st.sel = i end
+      end
+    end
+    keepVisible()
+  end
+
+  local function selected() return st.files[st.sel] end
+
+  local function uniqueName(name)
+    if not fs.exists(DOWNLOAD_DIR .. "/" .. name) then return name end
+    local base, ext = name:match("^(.*)(%.[^.]*)$")
+    if not base then base, ext = name, "" end
+    local n = 2
+    while fs.exists(DOWNLOAD_DIR .. "/" .. base .. "-" .. n .. ext) do n = n + 1 end
+    return base .. "-" .. n .. ext
+  end
+
+  local function doDownload()
+    local raw = normalizeGithubUrl(st.url)
+    if not raw then
+      setMsg(T.gBadUrl, C.err)
+      return
+    end
+    setMsg(string.format(T.gDownloading, 0), C.dim)
+    win.body(win)
+    local data, err = httpDownload(raw, 20, function(n)
+      setMsg(string.format(T.gDownloading, math.floor(n / 1024)), C.dim)
+      win.body(win)
+    end)
+    if not data then
+      setMsg(string.format(T.gFail, tostring(err)), C.err)
+      return
+    end
+    local name = (raw:match("([^/]+)$") or ""):gsub("[^%w_%-%.]", "_")
+    if name == "" then name = "arquivo.lua" end
+    if #data == 0 or data:sub(1, 3) == "404" then
+      setMsg(string.format(T.gFail, "vazio/404"), C.err)
+      return
+    end
+    if name:sub(-4) == ".lua" and not load(data, "=" .. name) then
+      setMsg(string.format(T.gFail, "codigo Lua invalido"), C.err)
+      return
+    end
+    fs.makeDirectory(DOWNLOAD_DIR)
+    name = uniqueName(name)
+    local hnd = fs.open(DOWNLOAD_DIR .. "/" .. name, "w")
+    if not hnd then
+      setMsg(string.format(T.gFail, "gravar"), C.err)
+      return
+    end
+    fs.write(hnd, data)
+    fs.close(hnd)
+    st.url = ""
+    reload(name)
+    setMsg(string.format(T.gSaved, DOWNLOAD_DIR .. "/" .. name), C.ok)
+  end
+
+  local function needLua()
+    local f = selected()
+    if not f or f.name:sub(-4) ~= ".lua" then
+      setMsg(T.gNeedLua, C.warn)
+      return nil
+    end
+    return f
+  end
+
+  local function runFile(restricted)
+    local f = selected()
+    if not f then return end
+    local out, err = runLuaFile(f.path, restricted)
+    st.outLines = out
+    st.outErr = nil
+    if err then
+      st.outLines[#st.outLines + 1] = string.format(T.gRunErr, err)
+      st.outErr = #st.outLines
+    elseif #st.outLines == 0 then
+      st.outLines[1] = T.gNoOutput
+    end
+    st.outTitle = string.format(T.gOutput, f.name) .. (restricted and "  [" .. T.gRunSafe .. "]" or "")
+    st.vfirst = 1
+    st.mode = "output"
+  end
+
+  local function backToMain()
+    st.mode = "main"
+    setMsg("", C.dim)
+  end
+
+  local function startDelete()
+    local f = selected()
+    if not f then return end
+    st.mode = "confirm"
+    setMsg(string.format(T.gDelAsk, f.name), C.warn)
+  end
+
+  local function doDelete()
+    local f = selected()
+    local keep = st.sel
+    st.mode = "main"
+    if not f then return end
+    local ok, result = pcall(fs.remove, f.path)
+    if ok and result then
+      reload()
+      st.sel = keep
+      keepVisible()
+      setMsg(T.deleted, C.ok)
+    else
+      setMsg(T.errPrefix .. f.name, C.err)
+    end
+  end
+
+  local function startRun()
+    if needLua() then
+      st.mode = "warn"
+      setMsg("", C.dim)
+    end
+  end
+
+  local function buttonsA()
+    if st.mode == "confirm" then
+      return makeButtons(ix, { { "yes", T.bYes, C.warn }, { "no", T.bNo } })
+    elseif st.mode == "warn" then
+      return makeButtons(ix, { { "go", T.gRunAnyway, C.warn }, { "cancel", T.bCancel } })
+    elseif st.mode == "output" then
+      return makeButtons(ix, { { "back", T.gBack } })
+    end
+    return makeButtons(ix, {
+      { "dl", T.gDownload, C.ok }, { "folder", T.gOpenFolder }, { "del", T.bDelete, C.warn },
+    })
+  end
+
+  local function buttonsB()
+    return makeButtons(ix, { { "run", T.gRun, C.warn }, { "safe", T.gRunSafe } })
+  end
+
+  win.body = function(self)
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(ix, self.y + 1, T.gUrl, C.dim, C.panel, iw)
+    rect(ix, urlY, iw, 1, C.barbg)
+    local shown = st.url
+    if #shown > iw - 3 then shown = shown:sub(#shown - iw + 4) end
+    put(ix + 1, urlY, shown .. (st.mode == "main" and "_" or ""), C.text, C.barbg, iw - 2)
+
+    drawButtons(buttonsA(), btnA)
+    if st.mode == "main" then drawButtons(buttonsB(), btnB) end
+
+    if st.mode == "output" then
+      put(ix, listY - 1, st.outTitle, C.accent, C.panel, iw)
+      for n = 0, rows - 1 do
+        local line = st.outLines[st.vfirst + n]
+        if line then
+          local isErr = (st.vfirst + n == st.outErr)
+          put(ix, listY + n, line, isErr and C.err or C.text, C.panel, iw)
+        end
+      end
+    elseif st.mode == "warn" then
+      local f = selected()
+      put(ix, listY, T.gWarn1, C.warn, C.panel, iw)
+      put(ix, listY + 1, T.gWarn2, C.warn, C.panel, iw)
+      if f then put(ix, listY + 3, f.name, C.text, C.panel, iw) end
+    else
+      if #st.files == 0 then put(ix, listY, T.gEmpty, C.dim, C.panel, iw) end
+      for n = 0, rows - 1 do
+        local f = st.files[st.first + n]
+        if f then
+          local y = listY + n
+          local isSel = (st.first + n == st.sel)
+          local bg = isSel and C.accent or C.panel
+          rect(ix - 1, y, iw + 2, 1, bg)
+          local size = fmtSize(f.size)
+          put(ix, y, "  " .. f.name, isSel and C.bg or C.text, bg, iw - ulen(size) - 1)
+          put(ix + iw - ulen(size), y, size, isSel and C.bg or C.dim, bg)
+        end
+      end
+    end
+
+    if st.msg ~= "" then
+      put(ix, statusY, st.msg, st.msgColor, C.panel, iw)
+    elseif st.mode == "main" then
+      put(ix, statusY, T.gSafeNote, C.dim, C.panel, iw)
+    end
+  end
+
+  win.onTouch = function(self, x, y)
+    if y == btnA or (y == btnB and st.mode == "main") then
+      local id = hitButton(y == btnA and buttonsA() or buttonsB(), x)
+      if id == "dl" then
+        doDownload()
+      elseif id == "folder" then
+        shared.open = "files"
+        shared.openArg = DOWNLOAD_DIR
+      elseif id == "del" then
+        startDelete()
+      elseif id == "run" then
+        startRun()
+      elseif id == "safe" then
+        if needLua() then runFile(true) end
+      elseif id == "yes" then
+        doDelete()
+      elseif id == "no" or id == "cancel" or id == "back" then
+        backToMain()
+      elseif id == "go" then
+        runFile(false)
+      else
+        return false
+      end
+      return true
+    end
+    if st.mode == "main" and y >= listY and y < listY + rows then
+      local idx = st.first + (y - listY)
+      if st.files[idx] then
+        st.sel = idx
+        setMsg("", C.dim)
+        return true
+      end
+    end
+    return false
+  end
+
+  win.onKey = function(self, char, code)
+    if st.mode == "confirm" then
+      if code == 31 or code == 21 then
+        doDelete()
+      elseif code == 49 or code == 1 then
+        backToMain()
+      end
+      return true
+    elseif st.mode == "warn" then
+      if code == 31 or code == 21 then
+        runFile(false)
+      elseif code == 49 or code == 1 then
+        backToMain()
+      end
+      return true
+    elseif st.mode == "output" then
+      if code == 200 then
+        st.vfirst = math.max(1, st.vfirst - 1)
+      elseif code == 208 then
+        st.vfirst = math.max(1, math.min(st.vfirst + 1, #st.outLines - rows + 1))
+      elseif code == 1 or code == 28 then
+        backToMain()
+      end
+      return true
+    end
+    if code == 28 then
+      doDownload()
+      return true
+    elseif code == 14 then
+      if #st.url > 0 then st.url = st.url:sub(1, -2) end
+      return true
+    elseif code == 200 then
+      st.sel = st.sel - 1
+      keepVisible()
+      return true
+    elseif code == 208 then
+      st.sel = st.sel + 1
+      keepVisible()
+      return true
+    elseif char and char >= 32 and char < 127 and #st.url < 300 then
+      st.url = st.url .. string.char(char)
+      return true
+    end
+    return false
+  end
+
+  win.onPaste = function(self, text)
+    if st.mode ~= "main" then return false end
+    text = tostring(text):gsub("%c", "")
+    st.url = (st.url .. text):sub(1, 300)
+    return true
+  end
+
+  reload()
+  return win
+end
+
 ---------------------------------------------------------------- boas-vindas
 local function welcome(cfg)
   local bw = math.min(w - 6, 40)
@@ -2734,31 +3682,59 @@ local function desktop(cfg)
   local shared = { refresh = false }
 
   local function buildItems()
-    return {
+    local all = {
       { id = "files", label = T.mFiles },
       { id = "editor", label = T.mEditor },
       { id = "notes", label = T.mNotes },
       { id = "calc", label = T.mCalc },
       { id = "monitor", label = T.mMonitor },
       { id = "printer", label = T.mPrinter },
+      { id = "gitdown", label = T.mGitDown },
       { id = "settings", label = T.mSettings },
       { sep = true },
       { id = "restart", label = T.mRestart, color = C.warn },
       { id = "shutdown", label = T.mShutdown, color = C.err },
     }
+    if not GO then return all end
+    local keep = { files = true, calc = true, monitor = true, settings = true, restart = true, shutdown = true }
+    local out = {}
+    for _, it in ipairs(all) do
+      if it.sep or keep[it.id] then out[#out + 1] = it end
+    end
+    return out
   end
 
   local items = buildItems()
   local menuOpen, win = false, nil
   local guard
+  local wall = nil
+
+  local function applyWallpaper(id)
+    wall = nil
+    if GO then return end
+    if id == "none" then
+      wall = { kind = "none" }
+    elseif type(id) == "string" and id:sub(1, 5) == "file:" then
+      local data = loadWallFile(id:sub(6))
+      if data then
+        wall = { kind = data.frames and "video" or "image", data = data, frame = 1 }
+      end
+    end
+  end
 
   local function render()
     rect(1, 1, w, h - 1, C.bg)
-    local size = logoSize()
-    local ly = math.floor((h - 1 - (size + 3)) / 2) + 1
-    drawLogo(math.floor((w - logoWidth(size)) / 2) + 1, ly, size, C.bg, 0x666666)
-    put(math.floor((w - ulen(T.empty)) / 2), ly + size + 1, T.empty, C.dim, C.bg)
-    put(math.floor((w - ulen(T.hint)) / 2), ly + size + 2, T.hint, C.dim, C.bg)
+    if GO then
+      put(math.floor((w - ulen(T.hint)) / 2), math.floor(h / 2), T.hint, C.dim, C.bg)
+    elseif wall then
+      drawWallpaper(wall)
+    else
+      local size = logoSize()
+      local ly = math.floor((h - 1 - (size + 3)) / 2) + 1
+      drawLogo(math.floor((w - logoWidth(size)) / 2) + 1, ly, size, C.bg, 0x666666)
+      put(math.floor((w - ulen(T.empty)) / 2), ly + size + 1, T.empty, C.dim, C.bg)
+      put(math.floor((w - ulen(T.hint)) / 2), ly + size + 2, T.hint, C.dim, C.bg)
+    end
     if win then guard(drawWindow, win) end
     drawTaskbar(cfg, menuOpen)
     if menuOpen then drawMenu(items) end
@@ -2795,7 +3771,7 @@ local function desktop(cfg)
     elseif it.id == "monitor" then
       win = newWindow(T.mMonitor, monitorBody, true)
     elseif it.id == "files" then
-      win = guard(filesApp)
+      win = guard(filesApp, it.arg)
     elseif it.id == "calc" then
       win = guard(calcApp)
     elseif it.id == "editor" then
@@ -2806,11 +3782,20 @@ local function desktop(cfg)
       win = guard(printerApp)
     elseif it.id == "settings" then
       win = guard(settingsApp, cfg, shared)
+    elseif it.id == "update" then
+      win = guard(updateApp)
+    elseif it.id == "wallpaper" then
+      win = guard(wallpaperApp, cfg, shared)
+    elseif it.id == "gitdown" then
+      win = guard(gitdownApp, shared)
     else
       win = newWindow(it.label, soonBody, false)
     end
     render()
   end
+
+  shared.applyWallpaper = applyWallpaper
+  applyWallpaper(cfg.wallpaper)
 
   rect(1, 1, w, h, C.bg)
   drawTaskbar(cfg, false)
@@ -2818,7 +3803,7 @@ local function desktop(cfg)
   render()
 
   while true do
-    local ev, _, a, b, c = cp.pullSignal(1)
+    local ev, _, a, b, c = cp.pullSignal(GO and 2 or 1)
     if ev == "touch" then
       if b == h and a <= ulen(MENU_BTN) then
         menuOpen = not menuOpen
@@ -2852,6 +3837,11 @@ local function desktop(cfg)
         guard(win.onScroll, win, c)
         if win then guard(drawWindow, win) end
       end
+    elseif ev == "clipboard" then
+      if win and win.onPaste and not menuOpen and not win.minimized then
+        local pasted = guard(win.onPaste, win, a)
+        if pasted and win then guard(drawWindow, win) end
+      end
     elseif ev == "key_down" then
       local handled = false
       if win and win.onKey and not menuOpen then
@@ -2869,6 +3859,16 @@ local function desktop(cfg)
     else
       drawTaskbar(cfg, menuOpen)
       if win and win.live and not menuOpen then guard(win.body, win) end
+      if wall and wall.kind == "video" and not win and not menuOpen and #wall.data.frames > 0 then
+        wall.frame = wall.frame % #wall.data.frames + 1
+        render()
+      end
+    end
+
+    if shared.open then
+      local openId, openArg = shared.open, shared.openArg
+      shared.open, shared.openArg = nil, nil
+      activate({ id = openId, label = openId, arg = openArg })
     end
 
     if shared.refresh then
@@ -2882,21 +3882,25 @@ end
 ---------------------------------------------------------------- inicio
 local stage = "boot"
 
+local function wait(t)
+  if not GO then pause(t) end
+end
+
 local function main()
   bootBase()
   bootProgress(15, T.loadSys)
-  pause(0.4)
+  wait(0.4)
   local cfg = loadConfig()
   if cfg then
     T = (langs[cfg.lang] or langs[1]).t
     applyTheme(cfg.theme)
   end
   bootProgress(45, T.loadUser)
-  pause(0.4)
+  wait(0.4)
   bootProgress(75, T.loadDesk)
-  pause(0.4)
+  wait(0.4)
   bootProgress(100, T.loadDone)
-  pause(0.3)
+  wait(0.3)
   if not cfg then
     if configBad then errorScreen(207, CONFIG, true) end
     cfg = setup()
