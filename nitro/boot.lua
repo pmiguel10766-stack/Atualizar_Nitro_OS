@@ -378,6 +378,40 @@ local langs = {
     gRunErr = "Erro: %s",
     gSafeNote = "Restrito: sem acesso ao computador",
     gBack = "Voltar",
+    mAntivirus = "Antivírus",
+    avPath = "Arquivo para analisar:",
+    avScan = "Analisar",
+    avFiles = "Arquivos em /Download",
+    avSafe = "SEGURO",
+    avWarn = "SUSPEITO",
+    avDanger = "PERIGOSO",
+    avVerdict = "Veredito: %s (%d/100)",
+    avWarnLine = "Análise: %s (%d/100)",
+    avNone = "Nenhum indício encontrado",
+    avNote = "Só lê o texto do código, não executa nada. Não é garantia.",
+    avNoFile = "Arquivo não encontrado",
+    avBig = "Arquivo grande demais para analisar",
+    avScanned = "Análise de %s",
+    avLineWord = "linha",
+    avCatWipe = "APAGAR",
+    avCatCrash = "TRAVAR",
+    avCatSpy = "ESPIONAR",
+    avCatWorm = "ESPALHAR",
+    avCatHide = "ESCONDER",
+    avRRemove = "apaga arquivos do sistema",
+    avREeprom = "mexe na EEPROM",
+    avRWipeLoop = "lista a raiz e apaga",
+    avRInit = "reescreve o init.lua",
+    avRLoop = "laço sem pausa",
+    avRRep = "texto gigante (string.rep)",
+    avRSpy = "lê dados e usa internet",
+    avRHost = "fala com site fora do GitHub",
+    avRNet = "usa internet",
+    avRWorm = "envia por rede e se instala",
+    avRLoad = "executa texto como código",
+    avRObf = "texto muito codificado",
+    avRLong = "linha muito longa",
+    avRB64 = "texto parece codificado",
   } },
   { name = "English", t = {
     steps = { "Language", "User", "Password" },
@@ -571,6 +605,40 @@ local langs = {
     gRunErr = "Error: %s",
     gSafeNote = "Restricted: no access to the computer",
     gBack = "Back",
+    mAntivirus = "Antivirus",
+    avPath = "File to analyze:",
+    avScan = "Analyze",
+    avFiles = "Files in /Download",
+    avSafe = "SAFE",
+    avWarn = "SUSPICIOUS",
+    avDanger = "DANGEROUS",
+    avVerdict = "Verdict: %s (%d/100)",
+    avWarnLine = "Analysis: %s (%d/100)",
+    avNone = "No signs found",
+    avNote = "Only reads the code text, runs nothing. Not a guarantee.",
+    avNoFile = "File not found",
+    avBig = "File too large to analyze",
+    avScanned = "Analysis of %s",
+    avLineWord = "line",
+    avCatWipe = "WIPE",
+    avCatCrash = "CRASH",
+    avCatSpy = "SPY",
+    avCatWorm = "SPREAD",
+    avCatHide = "HIDE",
+    avRRemove = "deletes system files",
+    avREeprom = "touches the EEPROM",
+    avRWipeLoop = "lists the root and deletes",
+    avRInit = "rewrites init.lua",
+    avRLoop = "loop without pause",
+    avRRep = "huge text (string.rep)",
+    avRSpy = "reads data and uses internet",
+    avRHost = "talks to a non-GitHub site",
+    avRNet = "uses internet",
+    avRWorm = "sends over network and installs itself",
+    avRLoad = "runs text as code",
+    avRObf = "heavily encoded text",
+    avRLong = "very long line",
+    avRB64 = "text looks encoded",
   } },
 }
 
@@ -3228,6 +3296,370 @@ local function wallpaperApp(cfg, shared)
   return win
 end
 
+---------------------------------------------------------------- Antivirus (le o texto, nunca executa)
+local AV_MAX = 131072
+local AV_DIR = "/Download"
+
+local AV_RULES = {
+  remove_root = { cat = "avCatWipe", pts = 40, label = "avRRemove" },
+  eeprom = { cat = "avCatWipe", pts = 40, label = "avREeprom" },
+  wipeloop = { cat = "avCatWipe", pts = 40, label = "avRWipeLoop" },
+  initw = { cat = "avCatWipe", pts = 35, label = "avRInit" },
+  loop = { cat = "avCatCrash", pts = 30, label = "avRLoop" },
+  rep = { cat = "avCatCrash", pts = 25, label = "avRRep" },
+  spyfile = { cat = "avCatSpy", pts = 45, label = "avRSpy" },
+  host = { cat = "avCatSpy", pts = 25, label = "avRHost" },
+  net = { cat = "avCatSpy", pts = 5, label = "avRNet" },
+  worm = { cat = "avCatWorm", pts = 45, label = "avRWorm" },
+  load = { cat = "avCatHide", pts = 10, label = "avRLoad" },
+  obf = { cat = "avCatHide", pts = 25, label = "avRObf" },
+  long = { cat = "avCatHide", pts = 10, label = "avRLong" },
+  b64 = { cat = "avCatHide", pts = 15, label = "avRB64" },
+}
+
+local AV_OK_HOSTS = {
+  ["github.com"] = true, ["www.github.com"] = true,
+  ["raw.githubusercontent.com"] = true, ["api.github.com"] = true,
+}
+
+local function countMatches(l, pattern)
+  local _, n = l:gsub(pattern, "")
+  return n
+end
+
+local function trimText(s)
+  return (s:match("^%s*(.-)%s*$"))
+end
+
+-- o "while true" tem alguma pausa (pullSignal, sleep, yield...) dentro do proprio bloco?
+local function avBlockHasPause(clean, start)
+  local depth = 0
+  local last = math.min(#clean, start + 300)
+  for j = start, last do
+    local l = clean[j]:lower()
+    if l:find("pullsignal", 1, true) or l:find("sleep", 1, true) or l:find("yield", 1, true)
+        or l:find("event.pull", 1, true) then
+      return true
+    end
+    depth = depth + countMatches(l, "%f[%w_]function%f[^%w_]") + countMatches(l, "%f[%w_]if%f[^%w_]")
+      + countMatches(l, "%f[%w_]do%f[^%w_]") + countMatches(l, "%f[%w_]repeat%f[^%w_]")
+      - countMatches(l, "%f[%w_]end%f[^%w_]") - countMatches(l, "%f[%w_]until%f[^%w_]")
+    if j > start and depth <= 0 then return false end
+  end
+  return false
+end
+
+local function avScan(text)
+  local raw, clean = {}, {}
+  for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+    raw[#raw + 1] = line
+    clean[#clean + 1] = (line:gsub("%-%-.*$", ""))
+  end
+
+  local found, order = {}, {}
+  local function hit(rule, ln, snippet)
+    local f = found[rule]
+    if not f then
+      f = { items = {} }
+      found[rule] = f
+      order[#order + 1] = rule
+    end
+    if #f.items < 3 then f.items[#f.items + 1] = { line = ln, text = snippet } end
+  end
+
+  local lowerAll = table.concat(clean, "\n"):lower()
+  local usesNet = lowerAll:find("internet", 1, true) ~= nil
+  local usesModem = (lowerAll:find("modem", 1, true) or lowerAll:find("tunnel", 1, true)) ~= nil
+  local readsFiles = (lowerAll:find("fs.open", 1, true) or lowerAll:find("io.open", 1, true)
+    or lowerAll:find("readfile", 1, true) or lowerAll:find(".read", 1, true)) ~= nil
+  local escapes = countMatches(lowerAll, "\\%d%d%d")
+  local firstSecret, firstNet, firstListRoot, firstSend
+
+  for i, line in ipairs(clean) do
+    local l = line:lower()
+    if l ~= "" then
+      local r = trimText(raw[i])
+      if l:find("remove", 1, true) and (l:find("[\"']/[\"']") or l:find("/init.lua", 1, true)
+          or l:find("/nitro", 1, true) or l:find("/boot", 1, true)) then
+        hit("remove_root", i, r)
+      end
+      if l:find("eeprom", 1, true) and (l:find("%.set%s*%(") or l:find("makereadonly", 1, true)) then
+        hit("eeprom", i, r)
+      end
+      if l:find("/init.lua", 1, true) and (l:find("open%s*%(") or l:find("rename%s*%("))
+          and (l:find("[\"']w[\"']") or l:find("[\"']wb[\"']") or l:find("rename", 1, true)) then
+        hit("initw", i, r)
+      end
+      if (l:find("string.rep", 1, true) or l:find(":rep", 1, true))
+          and (l:find("%d%d%d%d%d%d%d") or l:find("math.huge", 1, true) or l:find("1e[6-9]")) then
+        hit("rep", i, r)
+      end
+      for host in l:gmatch("https?://([%w%.%-]+)") do
+        if not AV_OK_HOSTS[host] then hit("host", i, host) end
+      end
+      if l:find("%f[%w_]load%s*%(") or l:find("loadstring", 1, true) or l:find("dofile", 1, true) then
+        hit("load", i, r)
+      end
+      if #raw[i] > 500 then hit("long", i, usub(r, 1, 50) .. "...") end
+      for s in line:gmatch("[\"']([A-Za-z0-9+/=]+)[\"']") do
+        if #s >= 80 then hit("b64", i, usub(s, 1, 30) .. "...") end
+      end
+      if not firstSecret and (l:find("senha", 1, true) or l:find("password", 1, true)
+          or l:find("token", 1, true) or l:find("config.lua", 1, true) or l:find("api_key", 1, true)) then
+        firstSecret = i
+      end
+      if not firstNet and l:find("internet", 1, true) then firstNet = i end
+      if not firstListRoot and l:find("list%s*%(%s*[\"']/[\"']%s*%)") then firstListRoot = i end
+      if not firstSend and (l:find("broadcast", 1, true) or l:find(".send", 1, true)) then
+        firstSend = i
+      end
+      if l:find("while%s+true%s+do") and not avBlockHasPause(clean, i) then
+        hit("loop", i, r)
+      end
+    end
+  end
+
+  if firstSecret and usesNet and readsFiles then
+    hit("spyfile", firstSecret, trimText(raw[firstSecret]))
+  end
+  if usesNet and not found.spyfile and not found.host then
+    hit("net", firstNet or 1, trimText(raw[firstNet or 1] or ""))
+  end
+  if firstListRoot and lowerAll:find("remove", 1, true) then
+    hit("wipeloop", firstListRoot, trimText(raw[firstListRoot]))
+  end
+  if usesModem and firstSend
+      and (lowerAll:find("autorun", 1, true) or lowerAll:find("init.lua", 1, true)) then
+    hit("worm", firstSend, trimText(raw[firstSend]))
+  end
+  if found.load and (lowerAll:find("string.char", 1, true) or escapes >= 20) then
+    hit("obf", found.load.items[1].line, "string.char / \\ddd")
+  end
+
+  table.sort(order, function(a, b) return AV_RULES[a].pts > AV_RULES[b].pts end)
+  local score, entries = 0, {}
+  for _, rule in ipairs(order) do
+    local def = AV_RULES[rule]
+    score = score + def.pts
+    for _, it in ipairs(found[rule].items) do
+      entries[#entries + 1] = {
+        cat = def.cat, label = def.label, line = it.line, text = it.text, pts = def.pts,
+      }
+    end
+  end
+  if score > 100 then score = 100 end
+  local verdict = "safe"
+  if score >= 50 then
+    verdict = "danger"
+  elseif score >= 20 then
+    verdict = "warn"
+  end
+  return { score = score, verdict = verdict, entries = entries }
+end
+
+local function avVerdictName(report)
+  local names = { safe = T.avSafe, warn = T.avWarn, danger = T.avDanger }
+  return names[report.verdict]
+end
+
+local function avVerdictColor(report)
+  local colors = { safe = C.ok, warn = C.warn, danger = C.err }
+  return colors[report.verdict]
+end
+
+-- transforma o relatorio em linhas de texto (com cor) para mostrar na tela
+local function avFormat(report)
+  local lines, colors = {}, {}
+  lines[1] = string.format(T.avVerdict, avVerdictName(report), report.score)
+  colors[1] = avVerdictColor(report)
+  if #report.entries == 0 then
+    lines[2] = T.avNone
+    colors[2] = C.dim
+  end
+  for _, e in ipairs(report.entries) do
+    local snippet = e.text
+    if ulen(snippet) > 40 then snippet = usub(snippet, 1, 40) .. "..." end
+    lines[#lines + 1] = string.format("[%s] %s (%s %d): %s",
+      T[e.cat], T[e.label], T.avLineWord, e.line, snippet)
+    colors[#lines] = (e.pts >= 30) and C.err or ((e.pts >= 10) and C.warn or C.dim)
+  end
+  lines[#lines + 1] = T.avNote
+  colors[#lines] = C.dim
+  return lines, colors
+end
+
+local function avAnalyzeFile(path)
+  if not fs.exists(path) or fs.isDirectory(path) then return nil, T.avNoFile end
+  if fs.size(path) > AV_MAX then return nil, T.avBig end
+  local data = readFile(path)
+  if not data then return nil, T.avNoFile end
+  if data:find("\0", 1, true) then return nil, T.binaryFile end
+  return avScan(data)
+end
+
+local function antivirusApp(presetPath)
+  local win = { title = T.mAntivirus }
+  setWinGeom(win, 62, 16)
+  local ix, iw = win.x + 2, win.w - 4
+  local pathY, btnY, listY = win.y + 2, win.y + 3, win.y + 5
+  local rows = win.h - 9
+  local statusY = win.y + win.h - 3
+  local st = {
+    mode = "main", path = presetPath or "", files = {}, sel = 1, first = 1,
+    lines = {}, colors = {}, vfirst = 1, title = "", msg = "", msgColor = C.dim,
+  }
+
+  local function setMsg(text, color)
+    st.msg, st.msgColor = text, color or C.dim
+  end
+
+  local function keepVisible()
+    if st.sel > #st.files then st.sel = #st.files end
+    if st.sel < 1 then st.sel = 1 end
+    if st.sel < st.first then st.first = st.sel end
+    if st.sel >= st.first + rows then st.first = st.sel - rows + 1 end
+  end
+
+  local function reload()
+    st.files = {}
+    local ok, names = pcall(fs.list, AV_DIR)
+    if ok and type(names) == "table" then
+      for _, n in ipairs(names) do
+        if n:sub(-1) ~= "/" then
+          local path = AV_DIR .. "/" .. n
+          st.files[#st.files + 1] = { name = n, path = path, size = fs.size(path) }
+        end
+      end
+    end
+    table.sort(st.files, function(p, q) return p.name:lower() < q.name:lower() end)
+    st.sel, st.first = 1, 1
+  end
+
+  local function analyze()
+    local path = trimText(st.path)
+    if path == "" then
+      setMsg(T.avNoFile, C.err)
+      return
+    end
+    if path:sub(1, 1) ~= "/" then path = "/" .. path end
+    local report, err = avAnalyzeFile(path)
+    if not report then
+      setMsg(tostring(err), C.err)
+      return
+    end
+    st.lines, st.colors = avFormat(report)
+    st.title = string.format(T.avScanned, path:match("([^/]+)$") or path)
+    st.vfirst = 1
+    st.mode = "result"
+    setMsg("", C.dim)
+  end
+
+  local function curButtons()
+    if st.mode == "result" then
+      return makeButtons(ix, { { "back", T.gBack } })
+    end
+    return makeButtons(ix, { { "scan", T.avScan, C.ok } })
+  end
+
+  win.body = function(self)
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(ix, self.y + 1, T.avPath, C.dim, C.panel, iw)
+    rect(ix, pathY, iw, 1, C.barbg)
+    local shown = st.path
+    if #shown > iw - 3 then shown = shown:sub(#shown - iw + 4) end
+    put(ix + 1, pathY, shown .. (st.mode == "main" and "_" or ""), C.text, C.barbg, iw - 2)
+    drawButtons(curButtons(), btnY)
+
+    if st.mode == "result" then
+      put(ix, listY - 1, st.title, C.accent, C.panel, iw)
+      for n = 0, rows - 1 do
+        local line = st.lines[st.vfirst + n]
+        if line then
+          put(ix, listY + n, line, st.colors[st.vfirst + n] or C.text, C.panel, iw)
+        end
+      end
+    else
+      put(ix, listY - 1, T.avFiles, C.dim, C.panel, iw)
+      for n = 0, rows - 1 do
+        local f = st.files[st.first + n]
+        if f then
+          local y = listY + n
+          local isSel = (st.first + n == st.sel)
+          local bg = isSel and C.accent or C.panel
+          rect(ix - 1, y, iw + 2, 1, bg)
+          local size = fmtSize(f.size)
+          put(ix, y, "  " .. f.name, isSel and C.bg or C.text, bg, iw - ulen(size) - 1)
+          put(ix + iw - ulen(size), y, size, isSel and C.bg or C.dim, bg)
+        end
+      end
+    end
+    if st.msg ~= "" then put(ix, statusY, st.msg, st.msgColor, C.panel, iw) end
+  end
+
+  win.onTouch = function(self, x, y)
+    if y == btnY then
+      local id = hitButton(curButtons(), x)
+      if id == "scan" then
+        analyze()
+      elseif id == "back" then
+        st.mode = "main"
+      else
+        return false
+      end
+      return true
+    end
+    if st.mode == "main" and y >= listY and y < listY + rows then
+      local idx = st.first + (y - listY)
+      if st.files[idx] then
+        st.sel = idx
+        st.path = st.files[idx].path
+        setMsg("", C.dim)
+        return true
+      end
+    end
+    return false
+  end
+
+  win.onKey = function(self, char, code)
+    if st.mode == "result" then
+      if code == 200 then
+        st.vfirst = math.max(1, st.vfirst - 1)
+      elseif code == 208 then
+        st.vfirst = math.max(1, math.min(st.vfirst + 1, #st.lines - rows + 1))
+      elseif code == 1 or code == 28 then
+        st.mode = "main"
+      end
+      return true
+    end
+    if code == 28 then
+      analyze()
+      return true
+    elseif code == 14 then
+      if #st.path > 0 then st.path = st.path:sub(1, -2) end
+      return true
+    elseif code == 200 or code == 208 then
+      st.sel = st.sel + (code == 208 and 1 or -1)
+      keepVisible()
+      if st.files[st.sel] then st.path = st.files[st.sel].path end
+      return true
+    elseif char and char >= 32 and char < 127 and #st.path < 200 then
+      st.path = st.path .. string.char(char)
+      return true
+    end
+    return false
+  end
+
+  win.onPaste = function(self, text)
+    if st.mode ~= "main" then return false end
+    text = tostring(text):gsub("%c", "")
+    st.path = (st.path .. text):sub(1, 200)
+    return true
+  end
+
+  reload()
+  return win
+end
+
 ---------------------------------------------------------------- app GitDown
 local DOWNLOAD_DIR = "/Download"
 local GIT_MAX = 131072
@@ -3446,6 +3878,7 @@ local function gitdownApp(shared)
     if not f then return end
     local out, err = runLuaFile(f.path, restricted)
     st.outLines = out
+    st.outColors = nil
     st.outErr = nil
     if err then
       st.outLines[#st.outLines + 1] = string.format(T.gRunErr, err)
@@ -3454,6 +3887,21 @@ local function gitdownApp(shared)
       st.outLines[1] = T.gNoOutput
     end
     st.outTitle = string.format(T.gOutput, f.name) .. (restricted and "  [" .. T.gRunSafe .. "]" or "")
+    st.vfirst = 1
+    st.mode = "output"
+  end
+
+  local function scanSelected()
+    local f = selected()
+    if not f then return end
+    local report, err = avAnalyzeFile(f.path)
+    if not report then
+      setMsg(tostring(err), C.err)
+      return
+    end
+    st.outLines, st.outColors = avFormat(report)
+    st.outErr = nil
+    st.outTitle = string.format(T.avScanned, f.name)
     st.vfirst = 1
     st.mode = "output"
   end
@@ -3487,7 +3935,9 @@ local function gitdownApp(shared)
   end
 
   local function startRun()
-    if needLua() then
+    local f = needLua()
+    if f then
+      st.scan = avAnalyzeFile(f.path)
       st.mode = "warn"
       setMsg("", C.dim)
     end
@@ -3507,7 +3957,9 @@ local function gitdownApp(shared)
   end
 
   local function buttonsB()
-    return makeButtons(ix, { { "run", T.gRun, C.warn }, { "safe", T.gRunSafe } })
+    return makeButtons(ix, {
+      { "run", T.gRun, C.warn }, { "safe", T.gRunSafe }, { "scan", T.avScan, C.ok },
+    })
   end
 
   win.body = function(self)
@@ -3526,8 +3978,10 @@ local function gitdownApp(shared)
       for n = 0, rows - 1 do
         local line = st.outLines[st.vfirst + n]
         if line then
-          local isErr = (st.vfirst + n == st.outErr)
-          put(ix, listY + n, line, isErr and C.err or C.text, C.panel, iw)
+          local idx = st.vfirst + n
+          local color = (st.outColors and st.outColors[idx])
+            or ((idx == st.outErr) and C.err or C.text)
+          put(ix, listY + n, line, color, C.panel, iw)
         end
       end
     elseif st.mode == "warn" then
@@ -3535,6 +3989,10 @@ local function gitdownApp(shared)
       put(ix, listY, T.gWarn1, C.warn, C.panel, iw)
       put(ix, listY + 1, T.gWarn2, C.warn, C.panel, iw)
       if f then put(ix, listY + 3, f.name, C.text, C.panel, iw) end
+      if st.scan then
+        put(ix, listY + 4, string.format(T.avWarnLine, avVerdictName(st.scan), st.scan.score),
+          avVerdictColor(st.scan), C.panel, iw)
+      end
     else
       if #st.files == 0 then put(ix, listY, T.gEmpty, C.dim, C.panel, iw) end
       for n = 0, rows - 1 do
@@ -3572,6 +4030,8 @@ local function gitdownApp(shared)
         startRun()
       elseif id == "safe" then
         if needLua() then runFile(true) end
+      elseif id == "scan" then
+        scanSelected()
       elseif id == "yes" then
         doDelete()
       elseif id == "no" or id == "cancel" or id == "back" then
@@ -3690,6 +4150,7 @@ local function desktop(cfg)
       { id = "monitor", label = T.mMonitor },
       { id = "printer", label = T.mPrinter },
       { id = "gitdown", label = T.mGitDown },
+      { id = "antivirus", label = T.mAntivirus },
       { id = "settings", label = T.mSettings },
       { sep = true },
       { id = "restart", label = T.mRestart, color = C.warn },
@@ -3788,6 +4249,8 @@ local function desktop(cfg)
       win = guard(wallpaperApp, cfg, shared)
     elseif it.id == "gitdown" then
       win = guard(gitdownApp, shared)
+    elseif it.id == "antivirus" then
+      win = guard(antivirusApp, it.arg)
     else
       win = newWindow(it.label, soonBody, false)
     end
