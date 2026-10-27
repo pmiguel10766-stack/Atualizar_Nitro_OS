@@ -3,8 +3,8 @@
 -- Se nao existe, baixa o instalador do GitHub e abre ele.
 -- Funciona com a BIOS padrao do OpenComputers (nao precisa de EEPROM propria).
 -- Erros aparecem em tela preta e vermelha com codigo MX-xxx.
-local BASE = "https://raw.githubusercontent.com/pmiguel10766-stack/Atualizar_Nitro_OS/main/"
-local INSTALLER = "https://raw.githubusercontent.com/pmiguel10766-stack/-opencomputers-script/refs/heads/main/installer.lua"
+local BASE = "https://raw.githubusercontent.com/pmiguel10766-stack/-opencomputers-script/refs/heads/main/"
+local INSTALLER = BASE .. "installer.lua"
 local BOOT = "/nitro/boot.lua"
 
 local cl, cp = component, computer
@@ -181,29 +181,40 @@ local function run(code, name, runCode)
   if not ok then errorScreen(classify(e, runCode), e) end
 end
 
-local function download(url)
+local function downloadOnce(url, timeout)
   local net = first("internet")
   if not net then return nil, "Sem Internet Card" end
   net = cl.proxy(net)
   local req, err = net.request(url)
   if not req then return nil, tostring(err) end
-  local limit = cp.uptime() + 20
-  local data = ""
+  local limit = cp.uptime() + timeout
+  local parts = {}
   local ok, e = pcall(function()
     while not req.finishConnect() do
-      if cp.uptime() > limit then error("Tempo esgotado") end
-      cp.pullSignal(0)
+      if cp.uptime() > limit then error("Tempo esgotado", 0) end
+      cp.pullSignal(0.05)
     end
+    local code = req.response()
+    if code and code >= 400 then error("HTTP " .. code, 0) end
     while true do
       local c = req.read(math.huge)
       if not c then break end
-      data = data .. c
+      parts[#parts + 1] = c
     end
   end)
   pcall(req.close)
   if not ok then return nil, tostring(e) end
-  if data:sub(1, 3) == "404" then return nil, "404 nao encontrado: " .. url end
-  return data
+  return table.concat(parts)
+end
+
+local function download(url)
+  local data, err
+  for attempt = 1, 2 do
+    data, err = downloadOnce(url, 30)
+    if data then return data end
+    if tostring(err):find("HTTP 4", 1, true) then break end
+  end
+  return nil, tostring(err) .. " (" .. url .. ")"
 end
 
 logoScreen("Carregando sistema...")
