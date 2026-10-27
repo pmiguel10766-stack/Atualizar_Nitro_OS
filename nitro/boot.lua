@@ -255,6 +255,9 @@ local langs = {
     e206 = "Problema no boot do sistema",
     e207 = "Problema em app ou usuário",
     e208 = "Erro desconhecido",
+    e209 = "Falha na interface (GUI)",
+    e210 = "Falha no kernel",
+    e211 = "Possivel virus no sistema",
     wifi = "Rede",
     wifiType = "Tipo",
     wifiStatus = "Status",
@@ -379,6 +382,30 @@ local langs = {
     gSafeNote = "Restrito: sem acesso ao computador",
     gBack = "Voltar",
     mAntivirus = "Antivírus",
+    mStore = "AppStore",
+    stTitle = "NITRO APPSTORE",
+    stLoading = "Carregando lista de apps...",
+    stEmpty = "Nenhum app na lista",
+    stInstall = "Instalar",
+    stInstalling = "Baixando %s...",
+    stScan = "Analisando %s...",
+    stSaved = "Instalado em /apps/%s",
+    stDanger = "BLOQUEADO: análise perigosa (%d/100)",
+    stWarn = "Análise suspeita (%d/100). Instalar mesmo assim?",
+    stYes = "Instalar",
+    mMyApps = "Meus Apps",
+    maTitle = "Apps instalados (/apps)",
+    maEmpty = "(nenhum app instalado)",
+    maHint = "Instale pela AppStore ou copie para /apps",
+    maBlocked = "BLOQUEADO pelo Antivírus (%d/100)",
+    maRunErr = "Erro: %s",
+    maOutput = "Saída de %s",
+    maDelAsk = "Excluir o app %s? [S/N]",
+    stNo = "Não",
+    stBad = "Lista inválida (app/apps.lua)",
+    stSyntax = "Código Lua inválido",
+    stFail = "Falhou: %s",
+    stRepo = "github.com/pmiguel10766-stack/nitro-appstore",
     avPath = "Arquivo para analisar:",
     avScan = "Analisar",
     avFiles = "Arquivos em /Download",
@@ -482,6 +509,9 @@ local langs = {
     e206 = "System boot problem",
     e207 = "App or user problem",
     e208 = "Unknown error",
+    e209 = "Interface (GUI) failure",
+    e210 = "Kernel failure",
+    e211 = "Possible virus in the system",
     wifi = "Network",
     wifiType = "Type",
     wifiStatus = "Status",
@@ -606,6 +636,30 @@ local langs = {
     gSafeNote = "Restricted: no access to the computer",
     gBack = "Back",
     mAntivirus = "Antivirus",
+    mStore = "AppStore",
+    stTitle = "NITRO APPSTORE",
+    stLoading = "Loading app list...",
+    stEmpty = "No apps in the list",
+    stInstall = "Install",
+    stInstalling = "Downloading %s...",
+    stScan = "Scanning %s...",
+    stSaved = "Installed to /apps/%s",
+    stDanger = "BLOCKED: dangerous analysis (%d/100)",
+    stWarn = "Suspicious analysis (%d/100). Install anyway?",
+    stYes = "Install",
+    mMyApps = "My Apps",
+    maTitle = "Installed apps (/apps)",
+    maEmpty = "(no apps installed)",
+    maHint = "Install from the AppStore or copy to /apps",
+    maBlocked = "BLOCKED by the Antivirus (%d/100)",
+    maRunErr = "Error: %s",
+    maOutput = "Output of %s",
+    maDelAsk = "Delete the app %s? [Y/N]",
+    stNo = "No",
+    stBad = "Invalid list (app/apps.lua)",
+    stSyntax = "Invalid Lua code",
+    stFail = "Failed: %s",
+    stRepo = "github.com/pmiguel10766-stack/nitro-appstore",
     avPath = "File to analyze:",
     avScan = "Analyze",
     avFiles = "Files in /Download",
@@ -3468,10 +3522,15 @@ local function avVerdictColor(report)
 end
 
 -- transforma o relatorio em linhas de texto (com cor) para mostrar na tela
-local function avFormat(report)
+local function avFormat(report, path)
   local lines, colors = {}, {}
   lines[1] = string.format(T.avVerdict, avVerdictName(report), report.score)
   colors[1] = avVerdictColor(report)
+  local isSystem = path and (path:sub(1, 6) == "/nitro" or path == "/init.lua")
+  if report.verdict == "danger" and isSystem then
+    lines[#lines + 1] = "MX-211  " .. T.e211 .. " (" .. path .. ")"
+    colors[#lines] = C.err
+  end
   if #report.entries == 0 then
     lines[2] = T.avNone
     colors[2] = C.dim
@@ -3547,7 +3606,7 @@ local function antivirusApp(presetPath)
       setMsg(tostring(err), C.err)
       return
     end
-    st.lines, st.colors = avFormat(report)
+    st.lines, st.colors = avFormat(report, path)
     st.title = string.format(T.avScanned, path:match("([^/]+)$") or path)
     st.vfirst = 1
     st.mode = "result"
@@ -4111,6 +4170,528 @@ local function gitdownApp(shared)
   return win
 end
 
+---------------------------------------------------------------- AppStore (repositorio nitro-appstore)
+local STORE_BASE = "https://raw.githubusercontent.com/pmiguel10766-stack/nitro-appstore/main/app/"
+local STORE_INDEX = "apps.lua"
+local APPS_DIR = "/apps"
+
+-- o indice e so dados: lista de { name = "...", file = "...", desc = "..." }
+local function parseStoreIndex(data)
+  local f = load(data, "=apps", "t", {})
+  if not f then return nil end
+  local ok, list = pcall(f)
+  if not ok or type(list) ~= "table" then return nil end
+  local out = {}
+  for _, a in ipairs(list) do
+    if type(a) == "table" and type(a.name) == "string" and type(a.file) == "string"
+        and a.file:match("^[%w_%-]+%.lua$") and #out < 60 then
+      out[#out + 1] = { name = a.name, file = a.file, desc = tostring(a.desc or "") }
+    end
+  end
+  if #out == 0 then return nil end
+  return out
+end
+
+local function appStoreApp(shared)
+  local win = { title = T.mStore }
+  setWinGeom(win, 60, 17)
+  local ix, iw = win.x + 2, win.w - 4
+  local btnY, listY = win.y + 2, win.y + 4
+  local rows = win.h - 9
+  local statusY = win.y + win.h - 3
+  local st = {
+    apps = nil, sel = 1, first = 1, busy = false,
+    msg = T.stLoading, msgColor = C.dim, pending = nil,
+  }
+
+  local function setMsg(text, color)
+    st.msg, st.msgColor = text, color or C.dim
+  end
+
+  local function keepVisible()
+    if st.apps then
+      if st.sel > #st.apps then st.sel = #st.apps end
+      if st.sel < 1 then st.sel = 1 end
+    end
+    if st.sel < st.first then st.first = st.sel end
+    if st.sel >= st.first + rows then st.first = st.sel - rows + 1 end
+  end
+
+  local function loadIndex()
+    local data, err = httpGet(STORE_BASE .. STORE_INDEX, 15)
+    if not data then
+      setMsg(string.format(T.stFail, tostring(err)), C.err)
+      return
+    end
+    local list = parseStoreIndex(data)
+    if not list then
+      setMsg(T.stBad, C.err)
+      return
+    end
+    st.apps = list
+    st.sel, st.first = 1, 1
+    setMsg(T.stRepo, C.dim)
+  end
+
+  -- baixa, confere sintaxe e analisa; so grava se o usuario aceitar (ou se estiver limpo)
+  local function installSelected(confirmed)
+    local app = st.apps and st.apps[st.sel]
+    if not app then return end
+    if not confirmed then
+      setMsg(string.format(T.stScan, app.file), C.dim)
+      win.body(win)
+      local data, err = httpGet(STORE_BASE .. app.file, 25)
+      if not data then
+        setMsg(string.format(T.stFail, tostring(err)), C.err)
+        return
+      end
+      if #data == 0 or data:sub(1, 3) == "404" or not load(data, "=" .. app.file) then
+        setMsg(T.stSyntax, C.err)
+        return
+      end
+      local report = avScan(data)
+      if report.verdict == "danger" then
+        setMsg(string.format(T.stDanger, report.score), C.err)
+        st.pending = nil
+        return
+      elseif report.verdict == "warn" then
+        st.pending = { app = app, data = data }
+        setMsg(string.format(T.stWarn, report.score), C.warn)
+        return
+      end
+      st.pending = { app = app, data = data }
+      st.pending.save = true
+    end
+    local p = st.pending
+    if not p then return end
+    fs.makeDirectory(APPS_DIR)
+    local hnd = fs.open(APPS_DIR .. "/" .. p.app.file, "w")
+    if not hnd then
+      setMsg(string.format(T.stFail, "gravar"), C.err)
+      return
+    end
+    fs.write(hnd, p.data)
+    fs.close(hnd)
+    st.pending = nil
+    if shared then shared.refresh = true end
+    setMsg(string.format(T.stSaved, p.app.file), C.ok)
+  end
+
+  local function curButtons()
+    if st.pending then
+      return makeButtons(ix, { { "yes", T.stYes, C.warn }, { "no", T.stNo } })
+    end
+    return makeButtons(ix, { { "install", T.stInstall, C.ok } })
+  end
+
+  win.body = function(self)
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(ix, self.y + 1, T.stTitle, C.accent, C.panel, iw)
+    drawButtons(curButtons(), btnY)
+    if not st.apps then
+      put(ix, listY, st.msg, st.msgColor, C.panel, iw)
+    else
+      if #st.apps == 0 then put(ix, listY, T.stEmpty, C.dim, C.panel, iw) end
+      for n = 0, rows - 1 do
+        local app = st.apps[st.first + n]
+        if app then
+          local y = listY + n
+          local isSel = (st.first + n == st.sel)
+          local bg = isSel and C.accent or C.panel
+          rect(ix - 1, y, iw + 2, 1, bg)
+          put(ix, y, "  " .. app.name, isSel and C.bg or C.text, bg, iw)
+        end
+      end
+    end
+    if st.apps then
+      local app = st.apps[st.sel]
+      if app and not st.pending then
+        put(ix, statusY - 1, app.desc, C.dim, C.panel, iw)
+      end
+    end
+    if st.msg ~= "" then put(ix, statusY, st.msg, st.msgColor, C.panel, iw) end
+  end
+
+  win.onTouch = function(self, x, y)
+    if y == btnY then
+      local id = hitButton(curButtons(), x)
+      if id == "install" then
+        installSelected(false)
+      elseif id == "yes" then
+        installSelected(true)
+      elseif id == "no" then
+        st.pending = nil
+        setMsg("", C.dim)
+      else
+        return false
+      end
+      return true
+    end
+    if st.apps and y >= listY and y < listY + rows then
+      local idx = st.first + (y - listY)
+      if st.apps[idx] then
+        st.sel = idx
+        st.pending = nil
+        setMsg(T.stRepo, C.dim)
+        return true
+      end
+    end
+    return false
+  end
+
+  win.onKey = function(self, char, code)
+    if st.pending then
+      if code == 31 or code == 21 then
+        installSelected(true)
+      elseif code == 49 or code == 1 then
+        st.pending = nil
+        setMsg("", C.dim)
+      end
+      return true
+    end
+    if code == 28 then
+      if st.apps then installSelected(false) end
+      return true
+    elseif code == 200 and st.apps then
+      st.sel = st.sel - 1
+      keepVisible()
+      return true
+    elseif code == 208 and st.apps then
+      st.sel = st.sel + 1
+      keepVisible()
+      return true
+    end
+    return false
+  end
+
+  win.canClose = function(self)
+    return not st.busy
+  end
+
+  loadIndex()
+  return win
+end
+
+---------------------------------------------------------------- apps instalados (/apps) no Menu
+local APP_DIRS = { "/apps", "/nitro/apps" }
+
+-- janela simples que mostra linhas de texto (resultado de scripts, erros, bloqueios)
+local function textWindow(title, lines, colors)
+  local win = { title = title }
+  setWinGeom(win, 62, 16)
+  local ix, iw = win.x + 2, win.w - 4
+  local rows = win.h - 5
+  local vfirst = 1
+
+  win.body = function(self)
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    for n = 0, rows - 1 do
+      local line = lines[vfirst + n]
+      if line then
+        put(ix, self.y + 2 + n, line, (colors and colors[vfirst + n]) or C.text, C.panel, iw)
+      end
+    end
+  end
+
+  win.onKey = function(self, char, code)
+    if code == 200 then
+      vfirst = math.max(1, vfirst - 1)
+      return true
+    elseif code == 208 then
+      vfirst = math.max(1, math.min(vfirst + 1, #lines - rows + 1))
+      return true
+    end
+    return false
+  end
+
+  win.onScroll = function(self, dir)
+    vfirst = math.max(1, math.min(vfirst - dir * 3, math.max(1, #lines - rows + 1)))
+  end
+
+  return win
+end
+
+-- nome e descricao vem de comentarios no comeco do arquivo: "-- name: X" e "-- desc: Y"
+local function appHeader(path, fallback)
+  local name, desc = fallback, ""
+  local hnd = fs.open(path)
+  if hnd then
+    local head = fs.read(hnd, 400) or ""
+    fs.close(hnd)
+    local nm = head:match("%-%-%s*[Nn]ame:%s*([^\r\n]+)") or head:match("%-%-%s*[Nn]ome:%s*([^\r\n]+)")
+    local ds = head:match("%-%-%s*[Dd]esc[%a]*:%s*([^\r\n]+)")
+    if nm then name = trimText(nm) end
+    if ds then desc = trimText(ds) end
+  end
+  return name, desc
+end
+
+-- apps soltos (/apps/x.lua) ou em pasta (/apps/X.APP/app.lua)
+local function listInstalledApps()
+  local out, seen = {}, {}
+  local function add(path, key, fallback, removePath)
+    if seen[key] then return end
+    seen[key] = true
+    local name, desc = appHeader(path, fallback)
+    out[#out + 1] = {
+      name = name, desc = desc, path = path, rm = removePath, size = fs.size(path),
+    }
+  end
+  for _, dir in ipairs(APP_DIRS) do
+    local ok, names = pcall(fs.list, dir)
+    if ok and type(names) == "table" then
+      for _, n in ipairs(names) do
+        if n:sub(-4) == ".lua" then
+          add(dir .. "/" .. n, n, n:sub(1, -5), dir .. "/" .. n)
+        elseif n:sub(-1) == "/" then
+          local entry = dir .. "/" .. n .. "app.lua"
+          if fs.exists(entry) then
+            add(entry, n, n:sub(1, -2), dir .. "/" .. n:sub(1, -2))
+          end
+        end
+      end
+    end
+  end
+  table.sort(out, function(a, b) return a.name:lower() < b.name:lower() end)
+  return out
+end
+
+-- o que o app recebe como "nitro": funcoes de desenho e as cores do sistema
+local function makeAppUi()
+  return {
+    put = function(x, y, s, fg, bg, maxw) put(x, y, s, fg or C.text, bg or C.panel, maxw) end,
+    rect = function(x, y, rw, rh, bg) rect(x, y, rw, rh, bg or C.panel) end,
+    box = drawBox,
+    colors = copyTable(C),
+    width = w,
+    height = h,
+    uptime = cp.uptime,
+  }
+end
+
+-- app em formato janela: o arquivo devolve { title, w, h, body, onKey, onTouch, onScroll }
+local function appWindow(def, ui, fname)
+  local win = { title = tostring(def.title or fname) }
+  setWinGeom(win, tonumber(def.w) or 50, tonumber(def.h) or 14)
+  win.live = def.live and true or false
+  win.body = function(self)
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    def.body(self, ui)
+  end
+  if type(def.onKey) == "function" then
+    win.onKey = function(self, char, code) return def.onKey(self, char, code, ui) end
+  end
+  if type(def.onTouch) == "function" then
+    win.onTouch = function(self, x, y) return def.onTouch(self, x, y, ui) end
+  end
+  if type(def.onScroll) == "function" then
+    win.onScroll = function(self, dir) return def.onScroll(self, dir, ui) end
+  end
+  return win
+end
+
+local function runInstalledApp(path)
+  local fname = path:match("([^/]+)$") or path
+  local data = readFile(path)
+  if not data then
+    return textWindow(fname, { string.format(T.maRunErr, T.avNoFile) }, { C.err })
+  end
+
+  -- analisa de novo na hora de abrir (o arquivo pode ter mudado depois da instalacao)
+  local report = avScan(data)
+  if report.verdict == "danger" then
+    local lines, colors = avFormat(report)
+    table.insert(lines, 1, string.format(T.maBlocked, report.score))
+    table.insert(colors, 1, C.err)
+    return textWindow(fname, lines, colors)
+  end
+
+  local out = {}
+  local env = makeEnv(false, out)
+  env.nitro = makeAppUi()
+  local fn, err = load(data, "=" .. fname, "t", env)
+  if not fn then
+    return textWindow(fname, { string.format(T.maRunErr, tostring(err)) }, { C.err })
+  end
+  local ok, result = pcall(fn)
+  if not ok then
+    out[#out + 1] = string.format(T.maRunErr, tostring(result))
+    local colors = {}
+    colors[#out] = C.err
+    return textWindow(fname, out, colors)
+  end
+  if type(result) == "table" and type(result.body) == "function" then
+    return appWindow(result, env.nitro, fname)
+  end
+  if #out == 0 then out[1] = T.gNoOutput end
+  return textWindow(string.format(T.maOutput, fname), out, nil)
+end
+
+local function myAppsApp(shared)
+  local win = { title = T.mMyApps }
+  setWinGeom(win, 60, 16)
+  local ix, iw = win.x + 2, win.w - 4
+  local btnY, listY = win.y + 2, win.y + 4
+  local rows = win.h - 9
+  local statusY = win.y + win.h - 3
+  local st = {
+    apps = {}, sel = 1, first = 1, mode = "list",
+    msg = "", msgColor = C.dim, lastClick = 0,
+  }
+
+  local function setMsg(text, color)
+    st.msg, st.msgColor = text, color or C.dim
+  end
+
+  local function keepVisible()
+    if st.sel > #st.apps then st.sel = #st.apps end
+    if st.sel < 1 then st.sel = 1 end
+    if st.sel < st.first then st.first = st.sel end
+    if st.sel >= st.first + rows then st.first = st.sel - rows + 1 end
+  end
+
+  local function reload()
+    st.apps = listInstalledApps()
+    st.sel, st.first = 1, 1
+  end
+
+  local function openSelected()
+    local app = st.apps[st.sel]
+    if app then shared.open = "app:" .. app.path end
+  end
+
+  local function startDelete()
+    local app = st.apps[st.sel]
+    if not app then return end
+    st.mode = "confirm"
+    setMsg(string.format(T.maDelAsk, app.name), C.warn)
+  end
+
+  local function doDelete()
+    local app = st.apps[st.sel]
+    local keep = st.sel
+    st.mode = "list"
+    if not app then return end
+    local ok, result = pcall(fs.remove, app.rm)
+    if ok and result then
+      reload()
+      st.sel = keep
+      keepVisible()
+      shared.refresh = true
+      setMsg(T.deleted, C.ok)
+    else
+      setMsg(T.errPrefix .. app.name, C.err)
+    end
+  end
+
+  local function cancelAsk()
+    st.mode = "list"
+    setMsg("", C.dim)
+  end
+
+  local function curButtons()
+    if st.mode == "confirm" then
+      return makeButtons(ix, { { "yes", T.bYes, C.warn }, { "no", T.bNo } })
+    end
+    return makeButtons(ix, {
+      { "open", T.bOpen, C.ok }, { "folder", T.gOpenFolder }, { "del", T.bDelete, C.warn },
+    })
+  end
+
+  win.body = function(self)
+    rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
+    put(ix, self.y + 1, T.maTitle, C.accent, C.panel, iw)
+    drawButtons(curButtons(), btnY)
+    if #st.apps == 0 then
+      put(ix, listY, T.maEmpty, C.dim, C.panel, iw)
+      put(ix, listY + 1, T.maHint, C.dim, C.panel, iw)
+    end
+    for n = 0, rows - 1 do
+      local app = st.apps[st.first + n]
+      if app then
+        local y = listY + n
+        local isSel = (st.first + n == st.sel)
+        local bg = isSel and C.accent or C.panel
+        rect(ix - 1, y, iw + 2, 1, bg)
+        local size = fmtSize(app.size)
+        put(ix, y, "  " .. app.name, isSel and C.bg or C.text, bg, iw - ulen(size) - 1)
+        put(ix + iw - ulen(size), y, size, isSel and C.bg or C.dim, bg)
+      end
+    end
+    local sel = st.apps[st.sel]
+    if sel and st.mode == "list" and sel.desc ~= "" then
+      put(ix, statusY - 1, sel.desc, C.dim, C.panel, iw)
+    end
+    if st.msg ~= "" then put(ix, statusY, st.msg, st.msgColor, C.panel, iw) end
+  end
+
+  win.onTouch = function(self, x, y)
+    if y == btnY then
+      local id = hitButton(curButtons(), x)
+      if id == "open" then
+        openSelected()
+      elseif id == "folder" then
+        shared.open = "files"
+        shared.openArg = "/apps"
+      elseif id == "del" then
+        startDelete()
+      elseif id == "yes" then
+        doDelete()
+      elseif id == "no" then
+        cancelAsk()
+      else
+        return false
+      end
+      return true
+    end
+    if st.mode == "list" and y >= listY and y < listY + rows then
+      local idx = st.first + (y - listY)
+      if st.apps[idx] then
+        local now = cp.uptime()
+        if st.sel == idx and now - st.lastClick < 1.5 then
+          openSelected()
+        else
+          st.sel = idx
+          setMsg("", C.dim)
+        end
+        st.lastClick = now
+        return true
+      end
+    end
+    return false
+  end
+
+  win.onKey = function(self, char, code)
+    if st.mode == "confirm" then
+      if code == 31 or code == 21 then
+        doDelete()
+      elseif code == 49 or code == 1 then
+        cancelAsk()
+      end
+      return true
+    end
+    if code == 200 then
+      st.sel = st.sel - 1
+      keepVisible()
+      return true
+    elseif code == 208 then
+      st.sel = st.sel + 1
+      keepVisible()
+      return true
+    elseif code == 28 then
+      openSelected()
+      return true
+    elseif code == 211 then
+      startDelete()
+      return true
+    end
+    return false
+  end
+
+  reload()
+  return win
+end
+
 ---------------------------------------------------------------- boas-vindas
 local function welcome(cfg)
   local bw = math.min(w - 6, 40)
@@ -4142,6 +4723,24 @@ local function desktop(cfg)
   local shared = { refresh = false }
 
   local function buildItems()
+    -- se sobrar espaco na tela, mostra os apps instalados direto no menu (antes da linha de separacao)
+    local function withApps(list)
+      local apps = listInstalledApps()
+      local cap = (h - 2) - (#list + 2) - 1
+      if cap <= 0 or #apps == 0 then return list end
+      local out, added = {}, false
+      for _, it in ipairs(list) do
+        if it.sep and not added then
+          for i = 1, math.min(cap, #apps) do
+            out[#out + 1] = { id = "app:" .. apps[i].path, label = "▸ " .. apps[i].name }
+          end
+          added = true
+        end
+        out[#out + 1] = it
+      end
+      return out
+    end
+
     local all = {
       { id = "files", label = T.mFiles },
       { id = "editor", label = T.mEditor },
@@ -4151,13 +4750,15 @@ local function desktop(cfg)
       { id = "printer", label = T.mPrinter },
       { id = "gitdown", label = T.mGitDown },
       { id = "antivirus", label = T.mAntivirus },
+      { id = "store", label = T.mStore },
+      { id = "myapps", label = T.mMyApps },
       { id = "settings", label = T.mSettings },
       { sep = true },
       { id = "restart", label = T.mRestart, color = C.warn },
       { id = "shutdown", label = T.mShutdown, color = C.err },
     }
-    if not GO then return all end
-    local keep = { files = true, calc = true, monitor = true, settings = true, restart = true, shutdown = true }
+    if not GO then return withApps(all) end
+    local keep = { files = true, calc = true, monitor = true, myapps = true, settings = true, restart = true, shutdown = true }
     local out = {}
     for _, it in ipairs(all) do
       if it.sep or keep[it.id] then out[#out + 1] = it end
@@ -4206,7 +4807,7 @@ local function desktop(cfg)
     if ok then return res end
     win = nil
     menuOpen = false
-    errorScreen(classify(res, 207), res, true)
+    errorScreen(classify(res, 209), res, true)
     render()
     return nil
   end
@@ -4251,6 +4852,12 @@ local function desktop(cfg)
       win = guard(gitdownApp, shared)
     elseif it.id == "antivirus" then
       win = guard(antivirusApp, it.arg)
+    elseif it.id == "store" then
+      win = guard(appStoreApp, shared)
+    elseif it.id == "myapps" then
+      win = guard(myAppsApp, shared)
+    elseif type(it.id) == "string" and it.id:sub(1, 4) == "app:" then
+      win = guard(runInstalledApp, it.id:sub(5))
     else
       win = newWindow(it.label, soonBody, false)
     end
@@ -4270,6 +4877,7 @@ local function desktop(cfg)
     if ev == "touch" then
       if b == h and a <= ulen(MENU_BTN) then
         menuOpen = not menuOpen
+        if menuOpen then items = buildItems() end
         render()
       elseif b == h and a >= wifiBox.x and a < wifiBox.x + wifiBox.w then
         menuOpen = false
@@ -4376,5 +4984,5 @@ end
 
 local ok, err = pcall(main)
 if not ok then
-  errorScreen(classify(err, stage == "boot" and 206 or 208), err, false)
+  errorScreen(classify(err, stage == "boot" and 210 or 208), err, false)
 end
