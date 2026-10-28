@@ -4549,6 +4549,14 @@ local function runInstalledApp(path)
   if type(result) == "table" and type(result.body) == "function" then
     return appWindow(result, env.nitro, fname)
   end
+  -- app/jogo que tem o proprio laco (devolve uma funcao): recebe { gpu = gpu } e volta quando o jogador sai
+  if type(result) == "function" then
+    local okRun, errRun = pcall(result, { gpu = gpu, nitro = env.nitro })
+    if not okRun then
+      return textWindow(fname, { string.format(T.maRunErr, tostring(errRun)) }, { C.err })
+    end
+    return nil
+  end
   if #out == 0 then out[1] = T.gNoOutput end
   return textWindow(string.format(T.maOutput, fname), out, nil)
 end
