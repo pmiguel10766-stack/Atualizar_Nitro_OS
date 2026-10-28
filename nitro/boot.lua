@@ -402,6 +402,9 @@ local langs = {
     maOutput = "Saída de %s",
     maDelAsk = "Excluir o app %s? [S/N]",
     stNo = "Não",
+    stRefresh = "Atualizar",
+    stRefreshing = "Atualizando a lista...",
+    stRefreshed = "Lista atualizada (%d)",
     stBad = "Lista inválida (app/apps.lua)",
     stSyntax = "Código Lua inválido",
     stFail = "Falhou: %s",
@@ -656,6 +659,9 @@ local langs = {
     maOutput = "Output of %s",
     maDelAsk = "Delete the app %s? [Y/N]",
     stNo = "No",
+    stRefresh = "Refresh",
+    stRefreshing = "Refreshing the list...",
+    stRefreshed = "List refreshed (%d)",
     stBad = "Invalid list (app/apps.lua)",
     stSyntax = "Invalid Lua code",
     stFail = "Failed: %s",
@@ -4217,7 +4223,11 @@ local function appStoreApp(shared)
     if st.sel >= st.first + rows then st.first = st.sel - rows + 1 end
   end
 
-  local function loadIndex()
+  local function loadIndex(isRefresh)
+    if isRefresh then
+      setMsg(T.stRefreshing, C.dim)
+      win.body(win)
+    end
     local data, err = httpGet(STORE_BASE .. STORE_INDEX, 15)
     if not data then
       setMsg(string.format(T.stFail, tostring(err)), C.err)
@@ -4228,9 +4238,20 @@ local function appStoreApp(shared)
       setMsg(T.stBad, C.err)
       return
     end
+    local keepFile = st.apps and st.apps[st.sel] and st.apps[st.sel].file
     st.apps = list
     st.sel, st.first = 1, 1
-    setMsg(T.stRepo, C.dim)
+    if keepFile then
+      for i, a in ipairs(list) do
+        if a.file == keepFile then st.sel = i end
+      end
+    end
+    keepVisible()
+    if isRefresh then
+      setMsg(string.format(T.stRefreshed, #list), C.ok)
+    else
+      setMsg(T.stRepo, C.dim)
+    end
   end
 
   -- baixa, confere sintaxe e analisa; so grava se o usuario aceitar (ou se estiver limpo)
@@ -4281,7 +4302,7 @@ local function appStoreApp(shared)
     if st.pending then
       return makeButtons(ix, { { "yes", T.stYes, C.warn }, { "no", T.stNo } })
     end
-    return makeButtons(ix, { { "install", T.stInstall, C.ok } })
+    return makeButtons(ix, { { "install", T.stInstall, C.ok }, { "refresh", T.stRefresh } })
   end
 
   win.body = function(self)
@@ -4317,6 +4338,8 @@ local function appStoreApp(shared)
       local id = hitButton(curButtons(), x)
       if id == "install" then
         installSelected(false)
+      elseif id == "refresh" then
+        loadIndex(true)
       elseif id == "yes" then
         installSelected(true)
       elseif id == "no" then
@@ -4351,6 +4374,9 @@ local function appStoreApp(shared)
     end
     if code == 28 then
       if st.apps then installSelected(false) end
+      return true
+    elseif code == 63 then
+      loadIndex(true)
       return true
     elseif code == 200 and st.apps then
       st.sel = st.sel - 1
@@ -4595,6 +4621,7 @@ local function myAppsApp(shared)
     end
     return makeButtons(ix, {
       { "open", T.bOpen, C.ok }, { "folder", T.gOpenFolder }, { "del", T.bDelete, C.warn },
+      { "refresh", T.stRefresh },
     })
   end
 
@@ -4635,6 +4662,10 @@ local function myAppsApp(shared)
         shared.openArg = "/apps"
       elseif id == "del" then
         startDelete()
+      elseif id == "refresh" then
+        reload()
+        shared.refresh = true
+        setMsg(string.format(T.stRefreshed, #st.apps), C.ok)
       elseif id == "yes" then
         doDelete()
       elseif id == "no" then
