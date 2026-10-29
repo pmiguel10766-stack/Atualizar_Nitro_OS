@@ -13,7 +13,7 @@ local uchar = (unicode and unicode.char) or string.char
 
 local fs = cl.proxy(cp.getBootAddress())
 local CONFIG = "/nitro/config.lua"
-local VERSION = "1.3"
+local VERSION = "1.4"
 
 -- edicao instalada: "pro" (completa) ou "go" (leve). O instalador grava /nitro/edition.
 local function detectEdition()
@@ -1346,6 +1346,37 @@ local function fmtSize(n)
   return string.format("%.1fK", n / 1024)
 end
 
+---------------------------------------------------------------- apoio de janelas (usado pelos apps)
+local function setWinGeom(win, ww, wh)
+  win.w = math.min(w - 2, ww)
+  win.h = math.min(h - 2, wh)
+  win.x = math.floor((w - win.w) / 2) + 1
+  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
+end
+
+local function makeButtons(x, defs)
+  local out = {}
+  for _, d in ipairs(defs) do
+    local label = " " .. d[2] .. " "
+    out[#out + 1] = { id = d[1], x = x, label = label, color = d[3] }
+    x = x + ulen(label) + 1
+  end
+  return out
+end
+
+local function drawButtons(list, y)
+  for _, b in ipairs(list) do
+    put(b.x, y, b.label, C.bg, b.color or C.accent)
+  end
+end
+
+local function hitButton(list, x)
+  for _, b in ipairs(list) do
+    if x >= b.x and x < b.x + ulen(b.label) then return b.id end
+  end
+  return nil
+end
+
 local function fxBytes(n)
   if n >= 1048576 then return string.format("%.1f MB", n / 1048576) end
   return string.format("%d KB", math.floor(n / 1024))
@@ -2275,36 +2306,6 @@ local function calcApp()
 end
 
 ---------------------------------------------------------------- apoio para os novos apps
-local function setWinGeom(win, ww, wh)
-  win.w = math.min(w - 2, ww)
-  win.h = math.min(h - 2, wh)
-  win.x = math.floor((w - win.w) / 2) + 1
-  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
-end
-
-local function makeButtons(x, defs)
-  local out = {}
-  for _, d in ipairs(defs) do
-    local label = " " .. d[2] .. " "
-    out[#out + 1] = { id = d[1], x = x, label = label, color = d[3] }
-    x = x + ulen(label) + 1
-  end
-  return out
-end
-
-local function drawButtons(list, y)
-  for _, b in ipairs(list) do
-    put(b.x, y, b.label, C.bg, b.color or C.accent)
-  end
-end
-
-local function hitButton(list, x)
-  for _, b in ipairs(list) do
-    if x >= b.x and x < b.x + ulen(b.label) then return b.id end
-  end
-  return nil
-end
-
 local function isProtected(path)
   return path:sub(1, 6) == "/nitro" or path == "/init.lua"
 end
