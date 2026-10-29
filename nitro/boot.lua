@@ -88,7 +88,6 @@ local function footer(text)
 end
 
 ---------------------------------------------------------------- logo Nitro OS
--- C listrado + rosto vermelho. x,y = canto superior esquerdo; size = altura em linhas.
 local function logoSize()
   return (h >= 24) and 14 or 8
 end
@@ -102,7 +101,6 @@ local function drawLogo(x, y, size, bg, stripe)
   local r = math.floor(R * 0.64 + 0.5)
   local arm = math.floor(R * 0.65 + 0.5)
 
-  -- C listrado (uma listra fina por linha)
   gpu.setBackground(bg)
   gpu.setForeground(stripe)
   for ry = 0, R - 1 do
@@ -119,7 +117,6 @@ local function drawLogo(x, y, size, bg, stripe)
     end
   end
 
-  -- rosto vermelho
   local Rf = math.floor(R * 0.43 + 0.5)
   local fcx = R + math.floor(R * 0.28 + 0.5)
   local red, black = 0xD01818, 0x000000
@@ -162,7 +159,6 @@ end
 
 local bootBar = { x = 1, y = 1, w = 1 }
 
--- tela de carregamento: logo + nome (desenhados uma vez)
 local function bootBase()
   rect(1, 1, w, h, C.bg)
   local size = logoSize()
@@ -175,7 +171,6 @@ local function bootBase()
   bootBar.y = ly + size + 4
 end
 
--- atualiza so o texto e a barra de carregamento
 local function bootProgress(pct, text)
   local label = string.format("[Carregado %d%%]", pct)
   rect(1, bootBar.y - 1, w, 1, C.bg)
@@ -613,7 +608,7 @@ local langs = {
     sFree = "Free RAM",
     sNet = "Internet",
     sTestNet = "Test internet",
-    sTesting = "Testing...",
+    sTesting = "Testando...",
     sTitle = "SETTINGS",
     sVersion = "Version %s",
     sFor = "For OpenComputers",
@@ -701,7 +696,7 @@ local langs = {
     fxPaste = "Paste here",
     fxMoving = "Move '%s': open the destination folder and click Paste here",
     fxMoved = "Moved!",
-    fxCopying = "Copying %s...",
+    fxCopying = "Copiando %s...",
     fxExists = "Already exists in the destination",
     fxSame = "Already in this folder",
     fxIntoSelf = "A folder cannot go inside itself",
@@ -765,8 +760,6 @@ local function classify(err, default)
   return default
 end
 
--- fundo preto, moldura vermelha, icone [X], codigo MX e detalhe tecnico.
--- canContinue = true: Enter continua. false: Enter reinicia o computador.
 local function errorScreen(code, detail, canContinue)
   local ew = math.min(w - 4, 60)
   local eh = math.min(h - 4, 12)
@@ -803,7 +796,6 @@ local function errorScreen(code, detail, canContinue)
   end
   if not canContinue then cp.shutdown(true) end
 end
-
 
 ---------------------------------------------------------------- moldura
 local function frame(step, title)
@@ -855,7 +847,6 @@ local function readFile(path)
   return data
 end
 
--- hash simples, so para nao guardar a senha em texto puro (nao e seguranca real)
 local function hash(s)
   s = "nitro:" .. s
   local x = 5381
@@ -886,7 +877,6 @@ local function saveConfig(cfg)
   fs.close(hnd)
 end
 
--- caixa de texto. Devolve (texto, "enter") ou (texto, "back") se apertar Esc
 local function input(y, masked, maxLen)
   local text = ""
   local function draw()
@@ -1047,10 +1037,9 @@ local function drawBox(x, y, bw, bh, title)
   if title then put(x + 2, y, " " .. title .. " ", C.text, C.panel, bw - 8) end
 end
 
----------------------------------------------------------------- rede (Internet Card / Wireless Network Card)
+---------------------------------------------------------------- rede
 local NET_TEST = "https://raw.githubusercontent.com/pmiguel10766-stack/-opencomputers-script/refs/heads/main/files.txt"
 
--- descobre quais placas de rede existem e em que estado estao
 local function netInfo()
   local info = { types = {}, state = "none", modem = nil, wireless = false }
   local netAddr = cl.list("internet")()
@@ -1076,7 +1065,6 @@ local function netInfo()
   return info
 end
 
--- icone da barra: 3 barrinhas + 1 simbolo (barras, simbolo, cor das barras, cor do simbolo)
 local function wifiGlyph(info)
   local s = info.state
   if s == "ok" then
@@ -1091,7 +1079,6 @@ local function wifiGlyph(info)
   return "▂▄▆", "×", C.dim, C.err
 end
 
--- testa de verdade: abre uma conexao HTTP e mede o tempo
 local function netTest()
   local addr = cl.list("internet")()
   if not addr then return false, T.wifiNoCard end
@@ -1149,7 +1136,6 @@ local function wifiApp()
     local info = netInfo()
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
 
-    -- tipo(s) de placa
     put(ix, self.y + 2, T.wifiType .. ":", C.dim, C.panel)
     if #info.types == 0 then
       put(ix + 9, self.y + 2, "-", C.text, C.panel)
@@ -1158,7 +1144,6 @@ local function wifiApp()
       put(ix + 9, self.y + 1 + i, name, C.text, C.panel, iw - 9)
     end
 
-    -- status
     local text, color = T.wifiNone, C.err
     if info.state == "ok" then
       text, color = T.wifiOk, C.ok
@@ -1172,13 +1157,11 @@ local function wifiApp()
     put(ix, self.y + 4, T.wifiStatus .. ":", C.dim, C.panel)
     put(ix + 9, self.y + 4, text, color, C.panel, iw - 9)
 
-    -- resultado do teste e botao
     if result ~= "" then put(ix, self.y + 5, result, resultColor, C.panel, iw) end
     local label = testLabel()
     rect(ix, testY, ulen(label), 1, C.accent)
     put(ix, testY, label, C.bg, C.accent)
 
-    -- alcance do sinal (so Wireless Network Card)
     if info.wireless then
       local cur = strength(info)
       put(ix, rangeY - 1, T.wifiRange .. ": " .. cur .. "/400", C.dim, C.panel, iw)
@@ -1277,7 +1260,7 @@ local function drawMenu(items)
   end
 end
 
----------------------------------------------------------------- janelas
+---------------------------------------------------------------- janelas e controle de janela
 local function newWindow(title, body, live)
   local ww = math.min(w - 4, 46)
   local wh = math.min(h - 3, 11)
@@ -1285,17 +1268,23 @@ local function newWindow(title, body, live)
     title = title, body = body, live = live, w = ww, h = wh,
     x = math.floor((w - ww) / 2) + 1,
     y = math.floor((h - 1 - wh) / 2) + 1,
+    moving = false,
   }
 end
 
 local function drawWindow(win)
   drawBox(win.x, win.y, win.w, win.h, win.title)
-  put(win.x + win.w - 5, win.y, "[X]", C.bg, C.accent)
+  put(win.x + win.w - 8, win.y, "[#]", C.bg, C.accent)
+  put(win.x + win.w - 4, win.y, "[X]", C.bg, C.accent)
   win.body(win)
 end
 
 local function closeHit(win, x, y)
-  return y == win.y and x >= win.x + win.w - 5 and x <= win.x + win.w - 3
+  return y == win.y and x >= win.x + win.w - 4 and x <= win.x + win.w - 2
+end
+
+local function moveHit(win, x, y)
+  return y == win.y and x >= win.x + win.w - 8 and x <= win.x + win.w - 6
 end
 
 local function soonBody(win)
@@ -1346,12 +1335,12 @@ local function fmtSize(n)
   return string.format("%.1fK", n / 1024)
 end
 
----------------------------------------------------------------- apoio de janelas (usado pelos apps)
 local function setWinGeom(win, ww, wh)
   win.w = math.min(w - 2, ww)
   win.h = math.min(h - 2, wh)
   win.x = math.floor((w - win.w) / 2) + 1
   win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
+  win.moving = false
 end
 
 local function makeButtons(x, defs)
@@ -1432,7 +1421,6 @@ local function fxCopyFile(srcFs, sp, dstFs, dp)
   return ok
 end
 
--- copia arquivo ou pasta inteira entre discos (limite de 300 itens)
 local function fxCopyTree(srcFs, sp, dstFs, dp, counter)
   counter.n = counter.n + 1
   if counter.n > 300 then return false end
@@ -1481,7 +1469,6 @@ local function filesApp(startDir)
     return proxyOf(addr).getLabel() or addr:sub(1, 4)
   end
 
-  -- /nitro e /init.lua do disco de boot sao protegidos
   local function isProt(drive, path)
     return drive == bootAddr and (path:sub(1, 6) == "/nitro" or path == "/init.lua")
   end
@@ -1739,7 +1726,6 @@ local function filesApp(startDir)
     end
   end
 
-  -- Mover: escolhe o item, abre a pasta de destino (ate em outro disco) e cola
   local function startMove()
     if st.view ~= "dir" then
       setMsg(T.fxOpenFirst, C.warn)
@@ -2077,7 +2063,6 @@ local function filesApp(startDir)
     end
   end
 
-  -- comeca em "Este Computador"; se veio uma pasta (ex.: /Download), abre ela
   st.hist = { { view = "home" } }
   st.hpos = 1
   if startDir then
@@ -2305,12 +2290,11 @@ local function calcApp()
   return win
 end
 
----------------------------------------------------------------- apoio para os novos apps
+---------------------------------------------------------------- editor de texto e notas
 local function isProtected(path)
   return path:sub(1, 6) == "/nitro" or path == "/init.lua"
 end
 
----------------------------------------------------------------- area de texto (Editor de Texto e Notas)
 local function newTextArea(x, y, tw, th)
   return {
     x = x, y = y, w = tw, h = th, lines = { "" },
@@ -3370,7 +3354,7 @@ local function settingsApp(cfg, shared)
   return win
 end
 
----------------------------------------------------------------- download HTTP e app Atualizar
+---------------------------------------------------------------- atualizacao
 local UPDATE_BASE = "https://raw.githubusercontent.com/pmiguel10766-stack/Atualizar_Nitro_OS/main/"
 local UPDATE_MANIFEST = "NitroOS_atualizar.lua"
 
@@ -3400,7 +3384,6 @@ local function httpGet(url, timeout)
   return data
 end
 
--- o manifesto e so dados (versao + lista de arquivos): roda sem acesso a nada do sistema
 local function parseManifest(data)
   local f = load(data, "=update", "t", {})
   if not f then return nil end
@@ -3491,7 +3474,6 @@ local function updateApp()
     local files = m.files
     local total = #files
 
-    -- fase 1: baixa e confere tudo em arquivos .new (o sistema atual nao e tocado)
     for i, path in ipairs(files) do
       st.pct = math.floor((i - 1) * 80 / total)
       setStatus(string.format(T.uDownloading, i, total, path), C.dim)
@@ -3520,7 +3502,6 @@ local function updateApp()
       fs.close(hnd)
     end
 
-    -- fase 2: troca os arquivos (guarda .bak e desfaz tudo se algo falhar)
     setStatus(T.uApplying, C.dim)
     local swapped = {}
     for i, path in ipairs(files) do
@@ -3605,7 +3586,7 @@ local function updateApp()
   return win
 end
 
----------------------------------------------------------------- fundos (imagens e video em quadros)
+---------------------------------------------------------------- fundos
 local WALL_DIR = "/nitro/fundo_imagens"
 
 local function loadWallFile(name)
@@ -3619,7 +3600,6 @@ local function loadWallFile(name)
   return nil
 end
 
--- cada celula mostra 2 "pixels" (um em cima, outro embaixo) usando o bloco ▀
 local function drawPixels(rows, palette, ox, oy, areaW, areaH)
   local cols = 0
   for _, r in ipairs(rows) do
@@ -3764,7 +3744,7 @@ local function wallpaperApp(cfg, shared)
   return win
 end
 
----------------------------------------------------------------- Antivirus (le o texto, nunca executa)
+---------------------------------------------------------------- Antivírus
 local AV_MAX = 131072
 local AV_DIR = "/Download"
 
@@ -3799,7 +3779,6 @@ local function trimText(s)
   return (s:match("^%s*(.-)%s*$"))
 end
 
--- o "while true" tem alguma pausa (pullSignal, sleep, yield...) dentro do proprio bloco?
 local function avBlockHasPause(clean, start)
   local depth = 0
   local last = math.min(#clean, start + 300)
@@ -3935,7 +3914,6 @@ local function avVerdictColor(report)
   return colors[report.verdict]
 end
 
--- transforma o relatorio em linhas de texto (com cor) para mostrar na tela
 local function avFormat(report, path)
   local lines, colors = {}, {}
   lines[1] = string.format(T.avVerdict, avVerdictName(report), report.score)
@@ -4137,7 +4115,6 @@ end
 local DOWNLOAD_DIR = "/Download"
 local GIT_MAX = 131072
 
--- troca links normais do GitHub (blob) pelo link "raw" que entrega o arquivo puro
 local function normalizeGithubUrl(u)
   u = u:match("^%s*(.-)%s*$")
   local host, rest = u:match("^https?://([^/]+)/(.+)$")
@@ -4195,7 +4172,6 @@ local function copyTable(t)
   return out
 end
 
--- restricted = true: so matematica, texto e tabelas (sem component, computer, os, io, load...)
 local function makeEnv(restricted, out)
   local function capture(...)
     local parts = {}
@@ -4255,7 +4231,7 @@ local function gitdownApp(shared)
   }
 
   local function setMsg(text, color)
-    st.msg, st.msgColor = text, color or C.dim
+    st.msg, st.msgColor = text, color or C.warn
   end
 
   local function keepVisible()
@@ -4584,12 +4560,11 @@ local function gitdownApp(shared)
   return win
 end
 
----------------------------------------------------------------- AppStore (repositorio nitro-appstore)
+---------------------------------------------------------------- AppStore
 local STORE_BASE = "https://raw.githubusercontent.com/pmiguel10766-stack/nitro-appstore/main/app/"
 local STORE_INDEX = "apps.lua"
 local APPS_DIR = "/apps"
 
--- o indice e so dados: lista de { name = "...", file = "...", desc = "..." }
 local function parseStoreIndex(data)
   local f = load(data, "=apps", "t", {})
   if not f then return nil end
@@ -4619,7 +4594,7 @@ local function appStoreApp(shared)
   }
 
   local function setMsg(text, color)
-    st.msg, st.msgColor = text, color or C.dim
+    st.msg, st.msgColor = text, color or C.warn
   end
 
   local function keepVisible()
@@ -4662,7 +4637,6 @@ local function appStoreApp(shared)
     end
   end
 
-  -- baixa, confere sintaxe e analisa; so grava se o usuario aceitar (ou se estiver limpo)
   local function installSelected(confirmed)
     local app = st.apps and st.apps[st.sel]
     if not app then return end
@@ -4806,10 +4780,9 @@ local function appStoreApp(shared)
   return win
 end
 
----------------------------------------------------------------- apps instalados (/apps) no Menu
+---------------------------------------------------------------- apps instalados
 local APP_DIRS = { "/apps", "/nitro/apps" }
 
--- janela simples que mostra linhas de texto (resultado de scripts, erros, bloqueios)
 local function textWindow(title, lines, colors)
   local win = { title = title }
   setWinGeom(win, 62, 16)
@@ -4845,7 +4818,6 @@ local function textWindow(title, lines, colors)
   return win
 end
 
--- nome e descricao vem de comentarios no comeco do arquivo: "-- name: X" e "-- desc: Y"
 local function appHeader(path, fallback)
   local name, desc = fallback, ""
   local hnd = fs.open(path)
@@ -4860,7 +4832,6 @@ local function appHeader(path, fallback)
   return name, desc
 end
 
--- apps soltos (/apps/x.lua) ou em pasta (/apps/X.APP/app.lua)
 local function listInstalledApps()
   local out, seen = {}, {}
   local function add(path, key, fallback, removePath)
@@ -4890,7 +4861,6 @@ local function listInstalledApps()
   return out
 end
 
--- o que o app recebe como "nitro": funcoes de desenho e as cores do sistema
 local function makeAppUi()
   return {
     put = function(x, y, s, fg, bg, maxw) put(x, y, s, fg or C.text, bg or C.panel, maxw) end,
@@ -4903,7 +4873,6 @@ local function makeAppUi()
   }
 end
 
--- app em formato janela: o arquivo devolve { title, w, h, body, onKey, onTouch, onScroll }
 local function appWindow(def, ui, fname)
   local win = { title = tostring(def.title or fname) }
   setWinGeom(win, tonumber(def.w) or 50, tonumber(def.h) or 14)
@@ -4931,7 +4900,6 @@ local function runInstalledApp(path)
     return textWindow(fname, { string.format(T.maRunErr, T.avNoFile) }, { C.err })
   end
 
-  -- analisa de novo na hora de abrir (o arquivo pode ter mudado depois da instalacao)
   local report = avScan(data)
   if report.verdict == "danger" then
     local lines, colors = avFormat(report)
@@ -4957,7 +4925,6 @@ local function runInstalledApp(path)
   if type(result) == "table" and type(result.body) == "function" then
     return appWindow(result, env.nitro, fname)
   end
-  -- app/jogo que tem o proprio laco (devolve uma funcao): recebe { gpu = gpu } e volta quando o jogador sai
   if type(result) == "function" then
     local okRun, errRun = pcall(result, { gpu = gpu, nitro = env.nitro })
     if not okRun then
@@ -4982,7 +4949,7 @@ local function myAppsApp(shared)
   }
 
   local function setMsg(text, color)
-    st.msg, st.msgColor = text, color or C.dim
+    st.msg, st.msgColor = text, color or C.warn
   end
 
   local function keepVisible()
@@ -5170,7 +5137,6 @@ local function desktop(cfg)
   local shared = { refresh = false }
 
   local function buildItems()
-    -- se sobrar espaco na tela, mostra os apps instalados direto no menu (antes da linha de separacao)
     local function withApps(list)
       local apps = listInstalledApps()
       local cap = (h - 2) - (#list + 2) - 1
@@ -5319,10 +5285,18 @@ local function desktop(cfg)
   welcome(cfg)
   render()
 
+  local dragOffsetX, dragOffsetY = 0, 0
+
   while true do
     local ev, _, a, b, c = cp.pullSignal(GO and 2 or 1)
     if ev == "touch" then
-      if b == h and a <= ulen(MENU_BTN) then
+      if win and win.moving then
+        -- Solta a janela na nova posição ao clicar novamente
+        win.x = math.max(1, math.min(w - win.w + 1, a - dragOffsetX))
+        win.y = math.max(1, math.min(h - 2 - win.h + 1, b - dragOffsetY))
+        win.moving = false
+        render()
+      elseif b == h and a <= ulen(MENU_BTN) then
         menuOpen = not menuOpen
         if menuOpen then items = buildItems() end
         render()
@@ -5346,6 +5320,11 @@ local function desktop(cfg)
         end
       elseif win and closeHit(win, a, b) then
         tryClose()
+      elseif win and moveHit(win, a, b) then
+        -- Ativa o modo de movimento da janela
+        win.moving = true
+        dragOffsetX = a - win.x
+        dragOffsetY = b - win.y
       elseif win and win.onTouch and inside(a, b, win.x, win.y, win.w, win.h) then
         local handled = guard(win.onTouch, win, a, b)
         if handled and win then guard(drawWindow, win) end
