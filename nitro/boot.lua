@@ -401,6 +401,32 @@ local langs = {
     maRunErr = "Erro: %s",
     maOutput = "Saída de %s",
     maDelAsk = "Excluir o app %s? [S/N]",
+    fxHome = "Este Computador",
+    fxFolders = "Pastas",
+    fxDrives = "Unidades",
+    fxDl = "Downloads",
+    fxNotes = "Notas",
+    fxApps = "Apps",
+    fxWalls = "Fundos",
+    fxRoot = "Raiz do disco",
+    fxBoot = "(sistema)",
+    fxRO = "(somente leitura)",
+    fxROMsg = "Disco somente leitura",
+    fxItems = "%d itens",
+    fxSel = "%d selecionado",
+    fxMove = "Mover",
+    fxPaste = "Colar aqui",
+    fxMoving = "Mover '%s': abra a pasta de destino e clique em Colar aqui",
+    fxMoved = "Movido!",
+    fxCopying = "Copiando %s...",
+    fxExists = "Já existe no destino",
+    fxSame = "Já está nesta pasta",
+    fxIntoSelf = "Uma pasta não pode ir para dentro dela mesma",
+    fxFree = "%s livres de %s",
+    fxOpenFirst = "Abra uma pasta primeiro",
+    fxCreate = "+ Criar",
+    fxCreatePrompt = "Nome do novo arquivo:",
+    fxCreated = "Criado",
     stNo = "Não",
     stRefresh = "Atualizar",
     stRefreshing = "Atualizando a lista...",
@@ -658,6 +684,32 @@ local langs = {
     maRunErr = "Error: %s",
     maOutput = "Output of %s",
     maDelAsk = "Delete the app %s? [Y/N]",
+    fxHome = "This Computer",
+    fxFolders = "Folders",
+    fxDrives = "Drives",
+    fxDl = "Downloads",
+    fxNotes = "Notes",
+    fxApps = "Apps",
+    fxWalls = "Wallpapers",
+    fxRoot = "Disk root",
+    fxBoot = "(system)",
+    fxRO = "(read-only)",
+    fxROMsg = "Read-only disk",
+    fxItems = "%d items",
+    fxSel = "%d selected",
+    fxMove = "Move",
+    fxPaste = "Paste here",
+    fxMoving = "Move '%s': open the destination folder and click Paste here",
+    fxMoved = "Moved!",
+    fxCopying = "Copying %s...",
+    fxExists = "Already exists in the destination",
+    fxSame = "Already in this folder",
+    fxIntoSelf = "A folder cannot go inside itself",
+    fxFree = "%s free of %s",
+    fxOpenFirst = "Open a folder first",
+    fxCreate = "+ New",
+    fxCreatePrompt = "New file name:",
+    fxCreated = "Created",
     stNo = "No",
     stRefresh = "Refresh",
     stRefreshing = "Refreshing the list...",
@@ -1294,17 +1346,22 @@ local function fmtSize(n)
   return string.format("%.1fK", n / 1024)
 end
 
-local function listDir(dir)
+local function fxBytes(n)
+  if n >= 1048576 then return string.format("%.1f MB", n / 1048576) end
+  return string.format("%d KB", math.floor(n / 1024))
+end
+
+local function fxList(dfs, dir)
   local out = {}
-  local ok, names = pcall(fs.list, dir)
+  local ok, names = pcall(dfs.list, dir)
   if not ok or type(names) ~= "table" then return out end
   for _, n in ipairs(names) do
     local isDir = n:sub(-1) == "/"
     local name = isDir and n:sub(1, -2) or n
     local path = joinPath(dir, name)
     out[#out + 1] = {
-      name = name, dir = isDir, path = path,
-      size = isDir and 0 or fs.size(path),
+      kind = "item", name = name, dir = isDir, path = path,
+      size = isDir and 0 or dfs.size(path),
     }
   end
   table.sort(out, function(p, q)
@@ -1314,39 +1371,95 @@ local function listDir(dir)
   return out
 end
 
-local function readPreview(path)
-  local hnd = fs.open(path)
+local function fxPreview(dfs, path)
+  local hnd = dfs.open(path)
   if not hnd then return nil end
-  local data = fs.read(hnd, 8192) or ""
-  fs.close(hnd)
+  local data = dfs.read(hnd, 8192) or ""
+  dfs.close(hnd)
   return data
 end
 
-local function filesApp(startDir)
-  local win = {
-    title = T.mFiles,
-    w = math.min(w - 2, 60),
-    h = math.min(h - 2, 18),
-  }
-  win.x = math.floor((w - win.w) / 2) + 1
-  win.y = math.max(1, math.floor((h - 1 - win.h) / 2) + 1)
+local function fxCopyFile(srcFs, sp, dstFs, dp)
+  local rh = srcFs.open(sp)
+  if not rh then return false end
+  local wh = dstFs.open(dp, "w")
+  if not wh then
+    srcFs.close(rh)
+    return false
+  end
+  local ok = true
+  while true do
+    local chunk = srcFs.read(rh, 4096)
+    if not chunk then break end
+    if not dstFs.write(wh, chunk) then
+      ok = false
+      break
+    end
+  end
+  srcFs.close(rh)
+  dstFs.close(wh)
+  return ok
+end
 
+-- copia arquivo ou pasta inteira entre discos (limite de 300 itens)
+local function fxCopyTree(srcFs, sp, dstFs, dp, counter)
+  counter.n = counter.n + 1
+  if counter.n > 300 then return false end
+  if srcFs.isDirectory(sp) then
+    dstFs.makeDirectory(dp)
+    local names = srcFs.list(sp) or {}
+    for _, n in ipairs(names) do
+      local name = n:gsub("/$", "")
+      if not fxCopyTree(srcFs, joinPath(sp, name), dstFs, joinPath(dp, name), counter) then
+        return false
+      end
+    end
+    return true
+  end
+  return fxCopyFile(srcFs, sp, dstFs, dp)
+end
+
+local function filesApp(startDir)
+  local win = { title = T.mFiles }
+  setWinGeom(win, 62, 19)
   local ix, iw = win.x + 2, win.w - 4
-  local btnY, listY = win.y + 2, win.y + 4
+  local addrY, btnA, btnB, listY = win.y + 1, win.y + 2, win.y + 3, win.y + 5
   local rows = win.h - 8
-  local statusY = win.y + win.h - 3
+  local msgY, statusY = win.y + win.h - 3, win.y + win.h - 2
+  local bootAddr = cp.getBootAddress()
+  local proxies = {}
+
+  local function proxyOf(addr)
+    if not proxies[addr] then proxies[addr] = cl.proxy(addr) end
+    return proxies[addr]
+  end
 
   local st = {
-    dir = startDir or "/", items = {}, sel = 1, first = 1, mode = "list",
-    msg = "", msgColor = C.warn, input = "", lines = {}, vfirst = 1,
-    viewName = "", lastClick = 0,
+    view = "home", drive = bootAddr, dir = "/", items = {}, sel = 1, first = 1,
+    mode = "list", msg = "", msgColor = C.warn, input = "", lines = {}, vfirst = 1,
+    viewName = "", lastClick = 0, hist = {}, hpos = 0, move = nil, crumbs = {},
   }
 
   local function setMsg(text, color)
     st.msg, st.msgColor = text, color or C.warn
   end
 
-  local function selected() return st.items[st.sel] end
+  local function curFs() return proxyOf(st.drive) end
+
+  local function driveName(addr)
+    return proxyOf(addr).getLabel() or addr:sub(1, 4)
+  end
+
+  -- /nitro e /init.lua do disco de boot sao protegidos
+  local function isProt(drive, path)
+    return drive == bootAddr and (path:sub(1, 6) == "/nitro" or path == "/init.lua")
+  end
+
+  local function selected()
+    local it = st.items[st.sel]
+    if it and it.kind ~= "header" then return it end
+    return nil
+  end
 
   local function keepVisible()
     if st.sel > #st.items then st.sel = #st.items end
@@ -1355,41 +1468,129 @@ local function filesApp(startDir)
     if st.sel >= st.first + rows then st.first = st.sel - rows + 1 end
   end
 
+  local function buildHome()
+    local items = {}
+    local folders = {}
+    local shortcuts = {
+      { "fxDl", "/Download" }, { "fxNotes", "/notas" }, { "fxApps", "/apps" },
+      { "fxWalls", "/nitro/fundo_imagens" }, { "fxRoot", "/" },
+    }
+    for _, sc in ipairs(shortcuts) do
+      if sc[2] == "/" or fs.exists(sc[2]) then
+        folders[#folders + 1] = { kind = "folder", name = T[sc[1]], drive = bootAddr, path = sc[2] }
+      end
+    end
+    local drives = {}
+    for addr in cl.list("filesystem") do
+      if addr ~= cp.tmpAddress() then
+        local d = proxyOf(addr)
+        drives[#drives + 1] = {
+          kind = "drive", addr = addr, name = driveName(addr),
+          used = d.spaceUsed(), total = d.spaceTotal(),
+          ro = d.isReadOnly(), boot = (addr == bootAddr),
+        }
+      end
+    end
+    items[#items + 1] = { kind = "header", name = T.fxFolders .. " (" .. #folders .. ")" }
+    for _, f in ipairs(folders) do items[#items + 1] = f end
+    items[#items + 1] = { kind = "header", name = T.fxDrives .. " (" .. #drives .. ")" }
+    for _, d in ipairs(drives) do items[#items + 1] = d end
+    return items
+  end
+
   local function reload(select)
-    st.items = listDir(st.dir)
+    if st.view == "home" then
+      st.items = buildHome()
+    else
+      st.items = fxList(curFs(), st.dir)
+    end
     st.sel, st.first = 1, 1
+    if st.items[1] and st.items[1].kind == "header" then st.sel = 2 end
     if select then
       for i, it in ipairs(st.items) do
-        if it.name == select then st.sel = i end
+        if it.kind ~= "header" and it.name == select then st.sel = i end
       end
     end
     keepVisible()
   end
 
-  local function backToList()
+  local function moveSel(delta)
+    local i = st.sel + delta
+    while st.items[i] and st.items[i].kind == "header" do i = i + delta end
+    if st.items[i] then st.sel = i end
+    keepVisible()
+  end
+
+  local function applyState(s)
+    st.view = s.view
+    if s.view == "dir" then
+      st.drive, st.dir = s.drive, s.dir
+    end
     st.mode = "list"
-    st.msg = ""
+    reload()
+  end
+
+  local function navigate(s)
+    for i = #st.hist, st.hpos + 1, -1 do table.remove(st.hist, i) end
+    st.hist[#st.hist + 1] = s
+    st.hpos = #st.hist
+    applyState(s)
+  end
+
+  local function goBack()
+    if st.hpos > 1 then
+      st.hpos = st.hpos - 1
+      applyState(st.hist[st.hpos])
+    end
+  end
+
+  local function goForward()
+    if st.hpos < #st.hist then
+      st.hpos = st.hpos + 1
+      applyState(st.hist[st.hpos])
+    end
   end
 
   local function goUp()
-    if st.dir ~= "/" then
-      local old = st.dir:match("([^/]+)$")
-      st.dir = parentPath(st.dir)
-      reload(old)
-      st.msg = ""
+    if st.view == "home" then return end
+    if st.dir == "/" then
+      navigate({ view = "home" })
+    else
+      navigate({ view = "dir", drive = st.drive, dir = parentPath(st.dir) })
     end
+  end
+
+  local function needDir()
+    if st.view ~= "dir" then
+      setMsg(T.fxOpenFirst, C.warn)
+      return false
+    end
+    if curFs().isReadOnly() then
+      setMsg(T.fxROMsg, C.err)
+      return false
+    end
+    return true
+  end
+
+  local function backToList()
+    st.mode = "list"
+    setMsg("", C.dim)
   end
 
   local function openItem()
     local it = selected()
     if not it then return end
-    if it.dir then
-      st.dir = it.path
-      reload()
-      st.msg = ""
+    if it.kind == "folder" then
+      navigate({ view = "dir", drive = it.drive, dir = it.path })
+      return
+    elseif it.kind == "drive" then
+      navigate({ view = "dir", drive = it.addr, dir = "/" })
+      return
+    elseif it.dir then
+      navigate({ view = "dir", drive = st.drive, dir = it.path })
       return
     end
-    local data = readPreview(it.path)
+    local data = fxPreview(curFs(), it.path)
     if not data then
       setMsg(T.errPrefix .. it.name, C.err)
       return
@@ -1408,26 +1609,35 @@ local function filesApp(startDir)
     st.vfirst = 1
     st.viewName = it.path
     st.mode = "view"
-    st.msg = ""
+    setMsg("", C.dim)
+  end
+
+  local function startCreate()
+    if not needDir() then return end
+    st.mode = "create"
+    st.input = ""
+    setMsg("", C.dim)
   end
 
   local function startRename()
+    if not needDir() then return end
     local it = selected()
-    if not it then return end
-    if it.path:sub(1, 6) == "/nitro" then
+    if not it or it.kind ~= "item" then return end
+    if isProt(st.drive, it.path) then
       setMsg(T.sysLocked, C.warn)
       return
     end
     st.mode = "rename"
     st.input = it.name
-    st.msg = ""
+    setMsg("", C.dim)
   end
 
   local function startDelete()
+    if not needDir() then return end
     local it = selected()
-    if not it then return end
+    if not it or it.kind ~= "item" then return end
     st.mode = "confirm"
-    if it.path:sub(1, 6) == "/nitro" then
+    if isProt(st.drive, it.path) then
       setMsg(string.format(T.sysWarn, it.name), C.err)
     else
       setMsg(string.format(T.confirmDel, it.name), C.warn)
@@ -1438,8 +1648,8 @@ local function filesApp(startDir)
     local it = selected()
     local keep = st.sel
     st.mode = "list"
-    if not it then return end
-    local ok, result = pcall(fs.remove, it.path)
+    if not it or it.kind ~= "item" then return end
+    local ok, result = pcall(curFs().remove, it.path)
     if ok and result then
       reload()
       st.sel = keep
@@ -1450,72 +1660,224 @@ local function filesApp(startDir)
     end
   end
 
-  local function doRename()
-    local it = selected()
-    if not it then
-      st.mode = "list"
-      return
-    end
+  local function submitPrompt()
     local name = st.input:match("^%s*(.-)%s*$")
     if name == "" or name:find("/", 1, true) then
       setMsg(T.nameBad, C.err)
       return
     end
-    if name == it.name then
-      backToList()
-      return
-    end
+    local dfs = curFs()
     local target = joinPath(st.dir, name)
-    if fs.exists(target) then
-      setMsg(T.nameExists, C.err)
-      return
-    end
-    local ok = pcall(fs.rename, it.path, target)
-    st.mode = "list"
-    if ok then
-      reload(name)
-      setMsg(T.renamed, C.ok)
+    if st.mode == "create" then
+      if dfs.exists(target) then
+        setMsg(T.nameExists, C.err)
+        return
+      end
+      local hnd = dfs.open(target, "w")
+      st.mode = "list"
+      if hnd then
+        dfs.write(hnd, "")
+        dfs.close(hnd)
+        reload(name)
+        setMsg(T.fxCreated, C.ok)
+      else
+        setMsg(T.errPrefix .. name, C.err)
+      end
     else
-      setMsg(T.errPrefix .. it.name, C.err)
+      local it = selected()
+      if not it then
+        backToList()
+        return
+      end
+      if name == it.name then
+        backToList()
+        return
+      end
+      if dfs.exists(target) then
+        setMsg(T.nameExists, C.err)
+        return
+      end
+      local ok = pcall(dfs.rename, it.path, target)
+      st.mode = "list"
+      if ok then
+        reload(name)
+        setMsg(T.renamed, C.ok)
+      else
+        setMsg(T.errPrefix .. it.name, C.err)
+      end
     end
   end
 
-  local actions = {
-    up = goUp, open = openItem, rename = startRename, delete = startDelete,
-    yes = doDelete, no = backToList, ok = doRename, cancel = backToList,
-    back = backToList,
-  }
+  -- Mover: escolhe o item, abre a pasta de destino (ate em outro disco) e cola
+  local function startMove()
+    if st.view ~= "dir" then
+      setMsg(T.fxOpenFirst, C.warn)
+      return
+    end
+    local it = selected()
+    if not it or it.kind ~= "item" then return end
+    if isProt(st.drive, it.path) then
+      setMsg(T.sysLocked, C.warn)
+      return
+    end
+    if curFs().isReadOnly() then
+      setMsg(T.fxROMsg, C.err)
+      return
+    end
+    st.move = { drive = st.drive, path = it.path, name = it.name, isDir = it.dir }
+    setMsg(string.format(T.fxMoving, it.name), C.warn)
+  end
 
-  local function curButtons()
-    local defs
-    if st.mode == "view" then
-      defs = { { "back", T.bBack } }
-    elseif st.mode == "confirm" then
-      defs = { { "yes", T.bYes }, { "no", T.bNo } }
-    elseif st.mode == "rename" then
-      defs = { { "ok", T.bOk }, { "cancel", T.bCancel } }
+  local function cancelMove()
+    st.move = nil
+    setMsg("", C.dim)
+  end
+
+  local function doPaste()
+    local mv = st.move
+    if not mv then return end
+    if st.view ~= "dir" then
+      setMsg(T.fxOpenFirst, C.warn)
+      return
+    end
+    local dstFs = curFs()
+    if dstFs.isReadOnly() then
+      setMsg(T.fxROMsg, C.err)
+      return
+    end
+    local target = joinPath(st.dir, mv.name)
+    local sameDrive = (st.drive == mv.drive)
+    if sameDrive and st.dir == parentPath(mv.path) then
+      setMsg(T.fxSame, C.warn)
+      return
+    end
+    if sameDrive and mv.isDir and (st.dir == mv.path or st.dir:sub(1, #mv.path + 1) == mv.path .. "/") then
+      setMsg(T.fxIntoSelf, C.err)
+      return
+    end
+    if dstFs.exists(target) then
+      setMsg(T.fxExists, C.err)
+      return
+    end
+    local srcFs = proxyOf(mv.drive)
+    local ok = pcall(function()
+      if sameDrive then
+        if not srcFs.rename(mv.path, target) then error("rename", 0) end
+      else
+        setMsg(string.format(T.fxCopying, mv.name), C.dim)
+        win.body(win)
+        if not fxCopyTree(srcFs, mv.path, dstFs, target, { n = 0 }) then
+          pcall(dstFs.remove, target)
+          error("copy", 0)
+        end
+        srcFs.remove(mv.path)
+      end
+    end)
+    if ok then
+      st.move = nil
+      reload(mv.name)
+      setMsg(T.fxMoved, C.ok)
     else
-      defs = { { "up", T.bUp }, { "open", T.bOpen },
-               { "rename", T.bRename }, { "delete", T.bDelete } }
+      setMsg(T.errPrefix .. mv.name, C.err)
     end
-    local out, x = {}, ix
-    for _, d in ipairs(defs) do
-      local label = " " .. d[2] .. " "
-      out[#out + 1] = { id = d[1], x = x, label = label }
-      x = x + ulen(label) + 1
+  end
+
+  local function buttonsA()
+    if st.mode == "confirm" then
+      return makeButtons(ix, { { "yes", T.bYes, C.warn }, { "no", T.bNo } })
+    elseif st.mode == "create" or st.mode == "rename" then
+      return makeButtons(ix, { { "ok", T.bOk }, { "cancel", T.bCancel } })
+    elseif st.mode == "view" then
+      return makeButtons(ix, { { "closeview", T.bBack } })
     end
-    return out
+    return makeButtons(ix, {
+      { "back", "◀" }, { "fwd", "▶" }, { "up", "▲" },
+      { "open", T.bOpen, C.ok }, { "create", T.fxCreate },
+    })
+  end
+
+  local function buttonsB()
+    if st.mode ~= "list" then return {} end
+    if st.move then
+      return makeButtons(ix, { { "paste", T.fxPaste, C.ok }, { "cancelmove", T.bCancel } })
+    end
+    return makeButtons(ix, {
+      { "rename", T.bRename }, { "move", T.fxMove }, { "delete", T.bDelete, C.warn },
+    })
+  end
+
+  local function drawAddress()
+    rect(ix, addrY, iw, 1, C.barbg)
+    st.crumbs = {}
+    if st.mode == "view" then
+      put(ix + 1, addrY, st.viewName, C.text, C.barbg, iw - 2)
+      return
+    end
+    local parts = { { text = T.fxHome, target = { view = "home" } } }
+    if st.view == "dir" then
+      parts[#parts + 1] = {
+        text = driveName(st.drive), target = { view = "dir", drive = st.drive, dir = "/" },
+      }
+      local acc = ""
+      for seg in st.dir:gmatch("[^/]+") do
+        acc = acc .. "/" .. seg
+        parts[#parts + 1] = { text = seg, target = { view = "dir", drive = st.drive, dir = acc } }
+      end
+    end
+    local function total(from)
+      local n = 0
+      for i = from, #parts do
+        n = n + ulen(parts[i].text) + (i > from and 3 or 0)
+      end
+      return n
+    end
+    local from = 1
+    while from < #parts and total(from) > iw - 2 do from = from + 1 end
+    local x = ix + 1
+    for i = from, #parts do
+      if i > from then
+        put(x, addrY, " > ", C.dim, C.barbg)
+        x = x + 3
+      end
+      local text = parts[i].text
+      put(x, addrY, text, (i == #parts) and C.text or C.accent, C.barbg)
+      st.crumbs[#st.crumbs + 1] = { x = x, w = ulen(text), target = parts[i].target }
+      x = x + ulen(text)
+    end
+  end
+
+  local function drawRow(y, it, isSel)
+    if it.kind == "header" then
+      put(ix, y, it.name, C.accent, C.panel, iw)
+      return
+    end
+    local bg = isSel and C.accent or C.panel
+    local fg = isSel and C.bg or C.text
+    local dim = isSel and C.bg or C.dim
+    rect(ix - 1, y, iw + 2, 1, bg)
+    local right = ""
+    local label
+    if it.kind == "drive" then
+      label = "▣ " .. it.name .. (it.boot and (" " .. T.fxBoot) or "") .. (it.ro and (" " .. T.fxRO) or "")
+      right = string.format(T.fxFree, fxBytes(it.total - it.used), fxBytes(it.total))
+    elseif it.kind == "folder" then
+      label = "▸ " .. it.name
+      right = it.path
+      fg = isSel and C.bg or C.accent
+    else
+      label = (it.dir and "▸ " or "  ") .. it.name .. (it.dir and "/" or "")
+      right = it.dir and "" or fmtSize(it.size)
+      if it.dir then fg = isSel and C.bg or C.accent end
+    end
+    put(ix, y, label, fg, bg, iw - ulen(right) - 1)
+    if right ~= "" then put(ix + iw - ulen(right), y, right, dim, bg) end
   end
 
   win.body = function(self)
     rect(self.x + 1, self.y + 1, self.w - 2, self.h - 2, C.panel)
-    local header = (st.mode == "view") and st.viewName or st.dir
-    put(ix, self.y + 1, header, C.dim, C.panel, iw)
-
-    for _, b in ipairs(curButtons()) do
-      local bg = (b.id == "delete" or b.id == "yes") and C.warn or C.accent
-      put(b.x, btnY, b.label, C.bg, bg)
-    end
+    drawAddress()
+    drawButtons(buttonsA(), btnA)
+    drawButtons(buttonsB(), btnB)
 
     if st.mode == "view" then
       for n = 0, rows - 1 do
@@ -1523,20 +1885,10 @@ local function filesApp(startDir)
         if line then put(ix, listY + n, line, C.text, C.panel, iw) end
       end
     else
-      if #st.items == 0 then put(ix, listY, T.emptyDir, C.dim, C.panel, iw) end
+      if st.view == "dir" and #st.items == 0 then put(ix, listY, T.emptyDir, C.dim, C.panel, iw) end
       for n = 0, rows - 1 do
         local it = st.items[st.first + n]
-        if it then
-          local y = listY + n
-          local isSel = (st.first + n == st.sel)
-          local bg = isSel and C.accent or C.panel
-          local fg = isSel and C.bg or (it.dir and C.accent or C.text)
-          rect(ix - 1, y, iw + 2, 1, bg)
-          local label = (it.dir and "▸ " or "  ") .. it.name .. (it.dir and "/" or "")
-          local size = it.dir and "" or fmtSize(it.size)
-          put(ix, y, label, fg, bg, iw - ulen(size) - 1)
-          if size ~= "" then put(ix + iw - ulen(size), y, size, fg, bg) end
-        end
+        if it then drawRow(listY + n, it, (st.first + n == st.sel)) end
       end
       if st.first > 1 then put(self.x + self.w - 3, listY, "▲", C.dim, C.panel) end
       if st.first + rows <= #st.items then
@@ -1544,37 +1896,83 @@ local function filesApp(startDir)
       end
     end
 
-    if st.mode == "rename" then
-      rect(ix, statusY, iw, 1, C.barbg)
-      put(ix + 1, statusY, T.renamePrompt .. " " .. st.input .. "_", C.text, C.barbg, iw - 2)
-      if st.msg ~= "" then put(ix, statusY - 1, st.msg, st.msgColor, C.panel, iw) end
-    elseif st.mode == "view" then
-      local last = math.min(#st.lines, st.vfirst + rows - 1)
-      put(ix, statusY, string.format("%d-%d / %d", st.vfirst, last, #st.lines),
-        C.dim, C.panel, iw)
+    if st.mode == "create" or st.mode == "rename" then
+      rect(ix, msgY, iw, 1, C.barbg)
+      local ask = (st.mode == "create") and T.fxCreatePrompt or T.renamePrompt
+      put(ix + 1, msgY, ask .. " " .. st.input .. "_", C.text, C.barbg, iw - 2)
     elseif st.msg ~= "" then
-      put(ix, statusY, st.msg, st.msgColor, C.panel, iw)
+      put(ix, msgY, st.msg, st.msgColor, C.panel, iw)
     end
+
+    local count = 0
+    for _, it in ipairs(st.items) do
+      if it.kind ~= "header" then count = count + 1 end
+    end
+    local status
+    if st.mode == "view" then
+      local last = math.min(#st.lines, st.vfirst + rows - 1)
+      status = string.format("%d-%d / %d", st.vfirst, last, #st.lines)
+    else
+      status = string.format(T.fxItems, count)
+      if selected() then status = status .. "   " .. string.format(T.fxSel, 1) end
+    end
+    put(ix, statusY, status, C.dim, C.panel, iw)
   end
 
   win.onTouch = function(self, x, y)
-    if y == btnY then
-      for _, b in ipairs(curButtons()) do
-        if x >= b.x and x < b.x + ulen(b.label) then
-          actions[b.id]()
+    if y == addrY then
+      for _, c in ipairs(st.crumbs) do
+        if x >= c.x and x < c.x + c.w then
+          navigate(c.target)
           return true
         end
       end
-    elseif st.mode == "list" and y >= listY and y < listY + rows
+      return false
+    end
+    if y == btnA or y == btnB then
+      local id = hitButton(y == btnA and buttonsA() or buttonsB(), x)
+      if id == "back" then
+        goBack()
+      elseif id == "fwd" then
+        goForward()
+      elseif id == "up" then
+        goUp()
+      elseif id == "open" then
+        openItem()
+      elseif id == "create" then
+        startCreate()
+      elseif id == "rename" then
+        startRename()
+      elseif id == "move" then
+        startMove()
+      elseif id == "delete" then
+        startDelete()
+      elseif id == "paste" then
+        doPaste()
+      elseif id == "cancelmove" then
+        cancelMove()
+      elseif id == "ok" then
+        submitPrompt()
+      elseif id == "cancel" or id == "no" or id == "closeview" then
+        backToList()
+      elseif id == "yes" then
+        doDelete()
+      else
+        return false
+      end
+      return true
+    end
+    if st.mode == "list" and y >= listY and y < listY + rows
         and x >= self.x + 1 and x < self.x + self.w - 1 then
       local idx = st.first + (y - listY)
-      if st.items[idx] then
+      local it = st.items[idx]
+      if it and it.kind ~= "header" then
         local now = cp.uptime()
         if st.sel == idx and now - st.lastClick < 1.5 then
           openItem()
         else
           st.sel = idx
-          st.msg = ""
+          st.msg = (st.move and st.msg) or ""
         end
         st.lastClick = now
         return true
@@ -1584,14 +1982,14 @@ local function filesApp(startDir)
   end
 
   win.onKey = function(self, char, code)
-    if st.mode == "rename" then
+    if st.mode == "create" or st.mode == "rename" then
       if code == 28 then
-        doRename()
+        submitPrompt()
       elseif code == 1 then
         backToList()
       elseif code == 14 then
         if ulen(st.input) > 0 then st.input = usub(st.input, 1, ulen(st.input) - 1) end
-      elseif char and char >= 32 and char ~= 127 and ulen(st.input) < 32 then
+      elseif char and char >= 32 and char ~= 127 and ulen(st.input) < 40 then
         st.input = st.input .. uchar(char)
       end
       return true
@@ -1612,13 +2010,14 @@ local function filesApp(startDir)
       end
       return true
     end
-    if code == 200 then
-      st.sel = st.sel - 1
-      keepVisible()
+    if code == 1 and st.move then
+      cancelMove()
+      return true
+    elseif code == 200 then
+      moveSel(-1)
       return true
     elseif code == 208 then
-      st.sel = st.sel + 1
-      keepVisible()
+      moveSel(1)
       return true
     elseif code == 28 then
       openItem()
@@ -1632,21 +2031,29 @@ local function filesApp(startDir)
     elseif code == 60 then
       startRename()
       return true
+    elseif code == 63 then
+      reload()
+      return true
     end
     return false
   end
 
   win.onScroll = function(self, dir)
     if st.mode == "view" then
-      local maxFirst = math.max(1, #st.lines - rows + 1)
-      st.vfirst = math.max(1, math.min(st.vfirst - dir * 3, maxFirst))
+      st.vfirst = math.max(1, math.min(st.vfirst - dir * 3, math.max(1, #st.lines - rows + 1)))
     elseif st.mode == "list" then
-      st.sel = st.sel - dir
-      keepVisible()
+      moveSel(-dir)
     end
   end
 
-  reload()
+  -- comeca em "Este Computador"; se veio uma pasta (ex.: /Download), abre ela
+  st.hist = { { view = "home" } }
+  st.hpos = 1
+  if startDir then
+    navigate({ view = "dir", drive = bootAddr, dir = startDir })
+  else
+    applyState(st.hist[1])
+  end
   return win
 end
 
