@@ -65,7 +65,7 @@ O sistema suporta a execução de aplicações externas através de:
 
 ---
 
-## 🔄 Como Atualizar no OpenComputers
+## 🔄 Como baixar no nitro OS
 
 No terminal do Nitro OS, execute:
 ```bash
