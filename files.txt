@@ -4,3 +4,4 @@ nitro/fundo_imagens/imagens1.lua
 nitro/fundo_imagens/imagens2.lua
 nitro/fundo_imagens/videos.lua
 nitro/sys/terminal.lua
+nitro/sys/arquivos.lua
