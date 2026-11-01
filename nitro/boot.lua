@@ -51,11 +51,9 @@ local function applyTheme(id)
   C.accent = THEMES[themeIndex(id)].accent
 end
 
-local WOX, WOY = 0, 0 -- deslocamento da janela arrastada
-
 local function rect(x, y, rw, rh, bg)
   gpu.setBackground(bg)
-  gpu.fill(x + WOX, y + WOY, rw, rh, " ")
+  gpu.fill(x, y, rw, rh, " ")
 end
 
 local function put(x, y, s, fg, bg, maxw)
@@ -63,7 +61,7 @@ local function put(x, y, s, fg, bg, maxw)
   if maxw and ulen(s) > maxw then s = usub(s, 1, maxw) end
   gpu.setBackground(bg)
   gpu.setForeground(fg)
-  gpu.set(x + WOX, y + WOY, s)
+  gpu.set(x, y, s)
 end
 
 local function key()
@@ -429,6 +427,19 @@ local langs = {
     fxCreate = "+ Criar",
     fxCreatePrompt = "Nome do novo arquivo:",
     fxCreated = "Criado",
+    mTerm = "Terminal",
+    tmHelp = "Comandos: help ls cd pwd cat mkdir rm ver uptime mem clear exit",
+    tmVer = "Nitro OS %s - Terminal seguro",
+    tmNoCmd = "Comando desconhecido: %s  (digite help)",
+    tmNoFile = "Não encontrado: %s",
+    tmIsDir = "É uma pasta: %s",
+    tmNoDir = "Pasta não encontrada: %s",
+    tmUsage = "Uso: %s <nome>",
+    tmBadName = "Nome inválido",
+    tmCatBig = "(mostrando só os primeiros 2 KB)",
+    tmBin = "(arquivo binário)",
+    tmDone = "Feito.",
+    tmProt = "Protegido: %s",
     stNo = "Não",
     stRefresh = "Atualizar",
     stRefreshing = "Atualizando a lista...",
@@ -615,7 +626,7 @@ local langs = {
     sFree = "Free RAM",
     sNet = "Internet",
     sTestNet = "Test internet",
-    sTesting = "Testando...",
+    sTesting = "Testing...",
     sTitle = "SETTINGS",
     sVersion = "Version %s",
     sFor = "For OpenComputers",
@@ -712,6 +723,19 @@ local langs = {
     fxCreate = "+ New",
     fxCreatePrompt = "New file name:",
     fxCreated = "Created",
+    mTerm = "Terminal",
+    tmHelp = "Commands: help ls cd pwd cat mkdir rm ver uptime mem clear exit",
+    tmVer = "Nitro OS %s - Safe Terminal",
+    tmNoCmd = "Unknown command: %s  (type help)",
+    tmNoFile = "Not found: %s",
+    tmIsDir = "It is a folder: %s",
+    tmNoDir = "Folder not found: %s",
+    tmUsage = "Usage: %s <name>",
+    tmBadName = "Invalid name",
+    tmCatBig = "(showing only the first 2 KB)",
+    tmBin = "(binary file)",
+    tmDone = "Done.",
+    tmProt = "Protected: %s",
     stNo = "No",
     stRefresh = "Refresh",
     stRefreshing = "Refreshing the list...",
@@ -1234,7 +1258,6 @@ local wifiBox = { x = 0, w = 4 }
 local netCache, netCacheT = nil, 0
 local MENU_BTN = " ◆ Nitro "
 local MENU_W = 26
-local minChip = nil
 
 local function drawTaskbar(cfg, menuOpen)
   rect(1, h, w, 1, C.panel)
@@ -1242,9 +1265,6 @@ local function drawTaskbar(cfg, menuOpen)
     put(1, h, MENU_BTN, C.bg, C.accent)
   else
     put(1, h, MENU_BTN, C.accent, C.panel)
-  end
-  if minChip then
-    put(ulen(MENU_BTN) + 2, h, " ▣ " .. usub(minChip, 1, 14) .. " ", C.bg, C.accent)
   end
   local right = cfg.user .. "  " .. clock()
   put(w - ulen(right), h, right, C.text, C.panel)
@@ -1294,63 +1314,14 @@ local function newWindow(title, body, live)
   }
 end
 
-local BTN_BG, BTN_CLOSE = 0x2E2E2E, 0xD0302A
-
--- corre fn com o desenho deslocado para onde a janela foi arrastada
-local function inWin(win, fn, ...)
-  WOX, WOY = win.dx or 0, win.dy or 0
-  local res = table.pack(pcall(fn, ...))
-  WOX, WOY = 0, 0
-  if not res[1] then error(res[2], 0) end
-  return table.unpack(res, 2, res.n)
-end
-
 local function drawWindow(win)
-  inWin(win, function()
-    drawBox(win.x, win.y, win.w, win.h, nil)
-    if win.title then
-      put(win.x + 2, win.y, " " .. win.title .. " ", C.text, C.panel, win.w - 15)
-    end
-    local bx = win.x + win.w - 11
-    put(bx, win.y, " ─ ", C.text, BTN_BG)
-    put(bx + 3, win.y, " □ ", C.text, BTN_BG)
-    put(bx + 6, win.y, " ✕ ", C.text, BTN_CLOSE)
-    win.body(win)
-  end)
-end
-
-local function winPos(win)
-  return win.x + (win.dx or 0), win.y + (win.dy or 0)
-end
-
--- coordenadas de ecra
-local function btnHit(win, x, y)
-  local vx, vy = winPos(win)
-  if y ~= vy then return nil end
-  local bx = vx + win.w - 11
-  if x >= bx and x <= bx + 2 then return "min"
-  elseif x >= bx + 3 and x <= bx + 5 then return "max"
-  elseif x >= bx + 6 and x <= bx + 8 then return "close" end
-  return nil
-end
-
-local function titleHit(win, x, y)
-  local vx, vy = winPos(win)
-  return y == vy and x > vx and x < vx + win.w - 1
+  drawBox(win.x, win.y, win.w, win.h, win.title)
+  put(win.x + win.w - 5, win.y, "[X]", C.bg, C.accent)
+  win.body(win)
 end
 
 local function closeHit(win, x, y)
-  return btnHit(win, x, y) == "close"
-end
-
-local function flashBtn(win, which)
-  local vx, vy = winPos(win)
-  local off = ({ min = 0, max = 3, close = 6 })[which]
-  local glyph = ({ min = " ─ ", max = " □ ", close = " ✕ " })[which]
-  gpu.setBackground(which == "close" and 0xFF5A4F or 0x4A4A4A)
-  gpu.setForeground(0xFFFFFF)
-  gpu.set(vx + win.w - 11 + off, vy, glyph)
-  cp.pullSignal(0.1)
+  return y == win.y and x >= win.x + win.w - 5 and x <= win.x + win.w - 3
 end
 
 local function soonBody(win)
@@ -3701,7 +3672,7 @@ local function drawPixels(rows, palette, ox, oy, areaW, areaH)
         if runLen > 0 then
           gpu.setForeground(runFg)
           gpu.setBackground(runBg)
-          gpu.set(x0 + runX + WOX, y0 + cy - 1 + WOY, string.rep("▀", runLen))
+          gpu.set(x0 + runX, y0 + cy - 1, string.rep("▀", runLen))
         end
         runX, runFg, runBg, runLen = cx - 1, fg, bg, (fg ~= nil) and 1 or 0
       end
@@ -3917,7 +3888,7 @@ local function avScan(text)
           and (l:find("%d%d%d%d%d%d%d") or l:find("math.huge", 1, true) or l:find("1e[6-9]")) then
         hit("rep", i, r)
       end
-      for host in l:gmatch("https?://([^/]+)") do
+      for host in l:gmatch("https?://([%w%.%-]+)") do
         if not AV_OK_HOSTS[host] then hit("host", i, host) end
       end
       if l:find("%f[%w_]load%s*%(") or l:find("loadstring", 1, true) or l:find("dofile", 1, true) then
@@ -4038,7 +4009,7 @@ local function antivirusApp(presetPath)
   }
 
   local function setMsg(text, color)
-    st.msg, st.msgColor = text, color or C.warn
+    st.msg, st.msgColor = text, color or C.dim
   end
 
   local function keepVisible()
@@ -4310,7 +4281,7 @@ local function gitdownApp(shared)
   }
 
   local function setMsg(text, color)
-    st.msg, st.msgColor = text, color or C.warn
+    st.msg, st.msgColor = text, color or C.dim
   end
 
   local function keepVisible()
@@ -4674,7 +4645,7 @@ local function appStoreApp(shared)
   }
 
   local function setMsg(text, color)
-    st.msg, st.msgColor = text, color or C.warn
+    st.msg, st.msgColor = text, color or C.dim
   end
 
   local function keepVisible()
@@ -5037,7 +5008,7 @@ local function myAppsApp(shared)
   }
 
   local function setMsg(text, color)
-    st.msg, st.msgColor = text, color or C.warn
+    st.msg, st.msgColor = text, color or C.dim
   end
 
   local function keepVisible()
@@ -5194,6 +5165,44 @@ local function myAppsApp(shared)
   return win
 end
 
+---------------------------------------------------------------- apps do sistema em /nitro/sys (carregados so ao abrir)
+local SYS_DIR = "/nitro/sys"
+local SAFE_ENV = {
+  math = math, string = string, table = table, tostring = tostring, tonumber = tonumber,
+  pairs = pairs, ipairs = ipairs, type = type, select = select, pcall = pcall, error = error,
+}
+
+-- a API que os apps recebem: so o que eles precisam, nada de variavel solta do boot
+local NITRO_API = {
+  put = put, rect = rect, setWinGeom = setWinGeom, makeButtons = makeButtons,
+  drawButtons = drawButtons, hitButton = hitButton, ulen = ulen, usub = usub, uchar = uchar,
+  joinPath = joinPath, parentPath = parentPath, readFile = readFile,
+  fmtSize = fmtSize, fmtTime = fmtTime, textWindow = textWindow,
+  C = C, fs = fs, cp = cp, cl = cl, VERSION = VERSION, T = nil,
+}
+
+local function openSys(name)
+  NITRO_API.T = T
+  local path = SYS_DIR .. "/" .. name .. ".lua"
+  local data = readFile(path)
+  if not data then
+    return textWindow(name, { string.format(T.maRunErr, T.avNoFile .. " (" .. path .. ")") }, { C.err })
+  end
+  local chunk, err = load(data, "=" .. name, "t", SAFE_ENV)
+  if not chunk then
+    return textWindow(name, { string.format(T.maRunErr, tostring(err)) }, { C.err })
+  end
+  local okF, factory = pcall(chunk)
+  if not okF or type(factory) ~= "function" then
+    return textWindow(name, { string.format(T.maRunErr, tostring(factory)) }, { C.err })
+  end
+  local okW, win = pcall(factory, NITRO_API)
+  if not okW or type(win) ~= "table" then
+    return textWindow(name, { string.format(T.maRunErr, tostring(win)) }, { C.err })
+  end
+  return win
+end
+
 ---------------------------------------------------------------- boas-vindas
 local function welcome(cfg)
   local bw = math.min(w - 6, 40)
@@ -5251,6 +5260,7 @@ local function desktop(cfg)
       { id = "monitor", label = T.mMonitor },
       { id = "printer", label = T.mPrinter },
       { id = "gitdown", label = T.mGitDown },
+      { id = "term", label = T.mTerm },
       { id = "antivirus", label = T.mAntivirus },
       { id = "store", label = T.mStore },
       { id = "myapps", label = T.mMyApps },
@@ -5287,7 +5297,6 @@ local function desktop(cfg)
   end
 
   local function render()
-    minChip = (win and win.minimized) and win.title or nil
     rect(1, 1, w, h - 1, C.bg)
     if GO then
       put(math.floor((w - ulen(T.hint)) / 2), math.floor(h / 2), T.hint, C.dim, C.bg)
@@ -5300,7 +5309,7 @@ local function desktop(cfg)
       put(math.floor((w - ulen(T.empty)) / 2), ly + size + 1, T.empty, C.dim, C.bg)
       put(math.floor((w - ulen(T.hint)) / 2), ly + size + 2, T.hint, C.dim, C.bg)
     end
-    if win and not win.minimized then guard(drawWindow, win) end
+    if win then guard(drawWindow, win) end
     drawTaskbar(cfg, menuOpen)
     if menuOpen then drawMenu(items) end
   end
@@ -5317,7 +5326,7 @@ local function desktop(cfg)
 
   local function tryClose()
     if win and win.canClose then
-      local okClose = guard(inWin, win, win.canClose, win)
+      local okClose = guard(win.canClose, win)
       if not okClose then
         if win then guard(drawWindow, win) end
         return
@@ -5353,6 +5362,8 @@ local function desktop(cfg)
       win = guard(wallpaperApp, cfg, shared)
     elseif it.id == "gitdown" then
       win = guard(gitdownApp, shared)
+    elseif it.id == "term" then
+      win = guard(openSys, "terminal")
     elseif it.id == "antivirus" then
       win = guard(antivirusApp, it.arg)
     elseif it.id == "store" then
@@ -5375,13 +5386,9 @@ local function desktop(cfg)
   welcome(cfg)
   render()
 
-  local drag = nil
-
   while true do
     local ev, _, a, b, c = cp.pullSignal(GO and 2 or 1)
-    local vis = win and not win.minimized
     if ev == "touch" then
-      local chipX = ulen(MENU_BTN) + 2
       if b == h and a <= ulen(MENU_BTN) then
         menuOpen = not menuOpen
         if menuOpen then items = buildItems() end
@@ -5389,10 +5396,6 @@ local function desktop(cfg)
       elseif b == h and a >= wifiBox.x and a < wifiBox.x + wifiBox.w then
         menuOpen = false
         win = guard(wifiApp)
-        render()
-      elseif b == h and minChip and a >= chipX and a < chipX + 4 + math.min(ulen(minChip), 14) then
-        menuOpen = false
-        win.minimized = false
         render()
       elseif menuOpen then
         local mx, my, mw, mh = menuGeometry(items)
@@ -5408,77 +5411,46 @@ local function desktop(cfg)
           menuOpen = false
           render()
         end
-      elseif vis and btnHit(win, a, b) then
-        local which = btnHit(win, a, b)
-        flashBtn(win, which)
-        if which == "close" then
-          tryClose()
-        elseif which == "min" then
-          win.minimized = true
-          render()
-        else
-          win.dx, win.dy = 0, 0
-          render()
-        end
-      elseif vis and titleHit(win, a, b) then
-        local vx, vy = winPos(win)
-        drag = { gx = a - vx, gy = b - vy }
-      elseif vis and win.onTouch then
-        local vx, vy = winPos(win)
-        if inside(a, b, vx, vy, win.w, win.h) then
-          local handled = guard(inWin, win, win.onTouch, win, a - (win.dx or 0), b - (win.dy or 0))
-          if handled and win then guard(drawWindow, win) end
-        end
-      end
-    elseif ev == "drag" then
-      if drag and vis then
-        local vx, vy = winPos(win)
-        local nx = math.max(1, math.min(w - win.w + 1, a - drag.gx))
-        local ny = math.max(1, math.min(h - win.h, b - drag.gy))
-        if nx ~= vx or ny ~= vy then
-          gpu.copy(vx, vy, win.w, win.h, nx - vx, ny - vy)
-          local ddx, ddy = nx - vx, ny - vy
-          gpu.setBackground(C.bg)
-          if ddx > 0 then gpu.fill(vx, vy, math.min(ddx, win.w), win.h, " ")
-          elseif ddx < 0 then gpu.fill(nx + win.w, vy, math.min(-ddx, win.w), win.h, " ") end
-          if ddy > 0 then gpu.fill(vx, vy, win.w, math.min(ddy, win.h), " ")
-          elseif ddy < 0 then gpu.fill(vx, ny + win.h, win.w, math.min(-ddy, win.h), " ") end
-          win.dx, win.dy = nx - win.x, ny - win.y
-        end
-      end
-    elseif ev == "drop" then
-      if drag then
-        drag = nil
-        if win then render() end
+      elseif win and closeHit(win, a, b) then
+        tryClose()
+      elseif win and win.onTouch and inside(a, b, win.x, win.y, win.w, win.h) then
+        local handled = guard(win.onTouch, win, a, b)
+        if handled and win then guard(drawWindow, win) end
       end
     elseif ev == "scroll" then
-      if vis and win.onScroll and not menuOpen then
-        guard(inWin, win, win.onScroll, win, c)
+      if win and win.onScroll and not menuOpen then
+        guard(win.onScroll, win, c)
         if win then guard(drawWindow, win) end
       end
     elseif ev == "clipboard" then
-      if vis and win.onPaste and not menuOpen then
-        local pasted = guard(inWin, win, win.onPaste, win, a)
+      if win and win.onPaste and not menuOpen and not win.minimized then
+        local pasted = guard(win.onPaste, win, a)
         if pasted and win then guard(drawWindow, win) end
       end
     elseif ev == "key_down" then
       local handled = false
-      if vis and win.onKey and not menuOpen then
-        handled = guard(inWin, win, win.onKey, win, a, b)
-        if handled and win then guard(drawWindow, win) end
+      if win and win.onKey and not menuOpen then
+        handled = guard(win.onKey, win, a, b)
+        if handled == "close" then
+          handled = true
+          win = nil
+          render()
+        elseif handled and win then
+          guard(drawWindow, win)
+        end
       end
       if not handled and b == 1 then
         if menuOpen then
           menuOpen = false
           render()
-        elseif vis then
+        elseif win then
           tryClose()
         end
       end
     else
       drawTaskbar(cfg, menuOpen)
-      if vis and win.live and not menuOpen then guard(inWin, win, win.body, win) end
-      if wall and wall.kind == "video" and not vis and not menuOpen and #wall.data.frames > 0 then
+      if win and win.live and not menuOpen then guard(win.body, win) end
+      if wall and wall.kind == "video" and not win and not menuOpen and #wall.data.frames > 0 then
         wall.frame = wall.frame % #wall.data.frames + 1
         render()
       end
