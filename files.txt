@@ -5,3 +5,16 @@ nitro/fundo_imagens/imagens2.lua
 nitro/fundo_imagens/videos.lua
 nitro/sys/terminal.lua
 nitro/sys/arquivos.lua
+nitro/sys/calc.lua
+nitro/sys/editor.lua
+nitro/sys/notas.lua
+nitro/sys/impressora.lua
+nitro/sys/config.lua
+nitro/sys/gitdown.lua
+nitro/sys/antivirus.lua
+nitro/sys/rede.lua
+nitro/sys/atualizar.lua
+nitro/sys/fundo.lua
+nitro/sys/appstore.lua
+nitro/sys/meusapps.lua
+nitro/sys/monitor.lua
