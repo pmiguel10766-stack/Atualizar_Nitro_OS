@@ -2,6 +2,7 @@
 -- Carregado pelo sistema quando o app e aberto. Recebe A (a API do Nitro OS).
 return function(A, ...)
   local T = A.T
+  local taClamp = A.taClamp
   local C = A.C
   local drawButtons = A.drawButtons
   local fs = A.fs
@@ -150,14 +151,105 @@ local function textEditorApp()
     if act then act() end
   end
 
+  -- ---------------- biblioteca de trechos (pasta /nitro/biblioteca)
+  local LIB_DIR = "/nitro/biblioteca"
+  local lib = { items = {}, sel = 1, first = 1 }
+
+  local function libLoad()
+    lib.items = {}
+    local ok, names = pcall(fs.list, LIB_DIR)
+    if ok and type(names) == "table" then
+      for _, n in ipairs(names) do
+        if n:sub(-4) == ".lua" then
+          local path = LIB_DIR .. "/" .. n
+          local data = readFile(path) or ""
+          local title = data:match("%-%-%s*titulo:%s*([^\r\n]+)") or n:sub(1, -5)
+          title = title:match("^%s*(.-)%s*$")
+          lib.items[#lib.items + 1] = { title = title, path = path }
+        end
+      end
+    end
+    table.sort(lib.items, function(p, q) return p.title:lower() < q.title:lower() end)
+    lib.sel, lib.first = 1, 1
+  end
+
+  local function libKeep()
+    if lib.sel < 1 then lib.sel = 1 end
+    if lib.sel > #lib.items then lib.sel = #lib.items end
+    if lib.sel < lib.first then lib.first = lib.sel end
+    if lib.sel >= lib.first + ta.h then lib.first = lib.sel - ta.h + 1 end
+  end
+
+  -- insere o texto na posicao do cursor (varias linhas)
+  local function insertText(text)
+    local ins = {}
+    for line in (text .. "\n"):gmatch("([^\n]*)\n") do
+      ins[#ins + 1] = (line:gsub("\r", ""):gsub("\t", "  "))
+    end
+    if #ins > 0 and ins[#ins] == "" then table.remove(ins) end
+    if #ins == 0 then return end
+    local cur = ta.lines[ta.cy]
+    local before = usub(cur, 1, ta.cx)
+    local after = usub(cur, ta.cx + 1)
+    ta.lines[ta.cy] = before .. ins[1]
+    local idx = ta.cy
+    for i = 2, #ins do
+      idx = idx + 1
+      table.insert(ta.lines, idx, ins[i])
+    end
+    ta.lines[idx] = ta.lines[idx] .. after
+    ta.cy = idx
+    ta.cx = ulen(ta.lines[idx]) - ulen(after)
+    ta.modified = true
+    taClamp(ta)
+  end
+
+  local function openLib()
+    libLoad()
+    st.mode = "lib"
+    setMsg("", C.dim)
+  end
+
+  local function insertSelected()
+    local it = lib.items[lib.sel]
+    if not it then return end
+    local data = readFile(it.path)
+    if not data then
+      setMsg(T.errPrefix .. it.title, C.err)
+      return
+    end
+    insertText(data)
+    st.mode = "edit"
+    setMsg(T.xInserted, C.ok)
+  end
+
+  local function libDraw()
+    if #lib.items == 0 then
+      put(ix, areaY, T.xLibEmpty, C.dim, C.panel, iw)
+      return
+    end
+    for n = 0, ta.h - 1 do
+      local it = lib.items[lib.first + n]
+      if it then
+        local y = areaY + n
+        local isSel = (lib.first + n == lib.sel)
+        local bg = isSel and C.accent or C.panel
+        rect(ix - 1, y, iw + 2, 1, bg)
+        put(ix, y, "  " .. it.title, isSel and C.bg or C.text, bg, iw)
+      end
+    end
+  end
+
   local function curButtons()
     if st.mode == "prompt" then
       return makeButtons(ix, { { "ok", T.bOk }, { "cancel", T.bCancel } })
     elseif st.mode == "confirm" then
       return makeButtons(ix, { { "yes", T.bYes, C.warn }, { "no", T.bNo } })
+    elseif st.mode == "lib" then
+      return makeButtons(ix, { { "insert", T.xInsert, C.ok }, { "back", T.bBack } })
     end
     return makeButtons(ix, {
-      { "new", T.xNew }, { "open", T.bOpen }, { "save", T.xSave, C.ok },
+      { "new", T.xNew }, { "open", T.bOpen }, { "save", T.xSave, C.ok }, { "lib", T.xLib },
     })
   end
 
@@ -166,7 +258,7 @@ local function textEditorApp()
     local name = st.path or T.xNoName
     put(ix, self.y + 1, name .. (ta.modified and " *" or ""), C.dim, C.panel, iw)
     drawButtons(curButtons(), btnY)
-    taDraw(ta, st.mode == "edit")
+    if st.mode == "lib" then libDraw() else taDraw(ta, st.mode == "edit") end
     if st.mode == "prompt" then
       rect(ix, statusY, iw, 1, C.barbg)
       local ask = (st.prompt == "open") and T.xPathAsk or T.xSaveAsk
@@ -194,10 +286,27 @@ local function textEditorApp()
         backToEdit()
       elseif id == "yes" then
         answerYes()
+      elseif id == "lib" then
+        guardDiscard(openLib)
+      elseif id == "insert" then
+        insertSelected()
+      elseif id == "back" then
+        st.mode = "edit"
+        setMsg("", C.dim)
       else
         return false
       end
       return true
+    end
+    if st.mode == "lib" then
+      if y >= areaY and y < areaY + ta.h then
+        local idx = lib.first + (y - areaY)
+        if lib.items[idx] then
+          lib.sel = idx
+          return true
+        end
+      end
+      return false
     end
     if st.mode == "edit" then return taClick(ta, x, y) end
     return false
@@ -205,6 +314,21 @@ local function textEditorApp()
 
   win.onKey = function(self, char, code)
     if code ~= 1 then st.closeWarn = false end
+    if st.mode == "lib" then
+      if code == 200 then
+        lib.sel = lib.sel - 1
+        libKeep()
+      elseif code == 208 then
+        lib.sel = lib.sel + 1
+        libKeep()
+      elseif code == 28 then
+        insertSelected()
+      elseif code == 1 then
+        st.mode = "edit"
+        setMsg("", C.dim)
+      end
+      return true
+    end
     if st.mode == "prompt" then
       if code == 28 then
         submitPrompt()
