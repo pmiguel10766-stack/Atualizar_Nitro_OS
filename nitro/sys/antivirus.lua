@@ -11,7 +11,8 @@ return function(A, cfg, ...)
   local netInfo, netTest, listInstalledApps = A.netInfo, A.netTest, A.listInstalledApps
 
   local LOG = "/nitro/antivirus.log"
-  local SCAN_DIRS = { "/Download", "/apps", "/nitro/sys" }
+  -- /nitro/sys fica de fora: sao arquivos do proprio sistema (conferidos em Integridade)
+local SCAN_DIRS = { "/Download", "/apps" }
   local MAX_FILES = 60
 
   local win = { title = T.mAntivirus }
