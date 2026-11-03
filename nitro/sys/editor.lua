@@ -3,6 +3,7 @@
 return function(A, ...)
   local T = A.T
   local taClamp = A.taClamp
+  local CLIP = A.CLIP
   local C = A.C
   local drawButtons = A.drawButtons
   local fs = A.fs
@@ -271,6 +272,53 @@ local function textEditorApp()
     end
   end
 
+  -- ---------------- selecao e area de transferencia (Ctrl+Insert copia, Shift+Insert cola)
+  local function selBounds()
+    if not ta.anchor then return nil end
+    local a, b = ta.anchor, { y = ta.cy, x = ta.cx }
+    if a.y > b.y or (a.y == b.y and a.x > b.x) then a, b = b, a end
+    if a.y == b.y and a.x == b.x then return nil end
+    return a, b
+  end
+
+  local function selText()
+    local s, e = selBounds()
+    if not s then return nil end
+    if s.y == e.y then return usub(ta.lines[s.y], s.x + 1, e.x) end
+    local parts = { usub(ta.lines[s.y], s.x + 1) }
+    for i = s.y + 1, e.y - 1 do parts[#parts + 1] = ta.lines[i] end
+    parts[#parts + 1] = usub(ta.lines[e.y], 1, e.x)
+    return table.concat(parts, "\n")
+  end
+
+  local function deleteSel()
+    local s, e = selBounds()
+    if not s then return false end
+    local first = usub(ta.lines[s.y], 1, s.x) .. usub(ta.lines[e.y], e.x + 1)
+    for _ = s.y + 1, e.y do table.remove(ta.lines, s.y + 1) end
+    ta.lines[s.y] = first
+    ta.cy, ta.cx = s.y, s.x
+    ta.anchor = nil
+    ta.modified = true
+    taClamp(ta)
+    return true
+  end
+
+  local function copySel()
+    local text = selText()
+    if not text then text = ta.lines[ta.cy] end
+    CLIP.text = text
+    setMsg(T.edCopied, C.ok)
+  end
+
+  local function pasteText(text)
+    if not text or text == "" then return end
+    deleteSel()
+    ta.anchor = nil
+    insertText(text)
+    setMsg(T.edPasted, C.ok)
+  end
+
   win.onTouch = function(self, x, y)
     if y == btnY then
       local id = hitButton(curButtons(), x)
@@ -312,7 +360,7 @@ local function textEditorApp()
     return false
   end
 
-  win.onKey = function(self, char, code)
+  win.onKey = function(self, char, code, mods)
     if code ~= 1 then st.closeWarn = false end
     if st.mode == "lib" then
       if code == 200 then
@@ -353,6 +401,31 @@ local function textEditorApp()
       return true
     end
     if st.msg ~= "" then setMsg("", C.dim) end
+    local shift = mods and mods.shift
+    local ctrl = mods and mods.ctrl
+    if code == 210 and ctrl then           -- Ctrl+Insert: copiar
+      copySel()
+      return true
+    end
+    if code == 210 and shift then          -- Shift+Insert: colar
+      pasteText(CLIP.text or "")
+      return true
+    end
+    local arrow = (code == 200 or code == 208 or code == 203 or code == 205
+      or code == 199 or code == 207 or code == 201 or code == 209)
+    if arrow then
+      if shift then
+        if not ta.anchor then ta.anchor = { y = ta.cy, x = ta.cx } end
+      else
+        ta.anchor = nil
+      end
+      return taKey(ta, char, code)
+    end
+    -- digitar, apagar ou Enter com trecho selecionado: apaga a selecao antes
+    if ta.anchor and ((char and char >= 32) or code == 14 or code == 28 or code == 211) then
+      deleteSel()
+      if code == 14 or code == 211 then return true end
+    end
     return taKey(ta, char, code)
   end
 
@@ -361,6 +434,13 @@ local function textEditorApp()
     st.closeWarn = true
     setMsg(T.xUnsaved, C.warn)
     return false
+  end
+
+  win.onPaste = function(self, text)
+    if st.mode ~= "edit" then return false end
+    local clean = (tostring(text):gsub("\r", ""):gsub("\t", "  "))
+    pasteText(clean)
+    return true
   end
 
   return win
