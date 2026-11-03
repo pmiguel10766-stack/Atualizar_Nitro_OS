@@ -13,7 +13,7 @@ local uchar = (unicode and unicode.char) or string.char
 
 local fs = cl.proxy(cp.getBootAddress())
 local CONFIG = "/nitro/config.lua"
-local VERSION = "1.16"
+local VERSION = "1.17"
 
 -- edicao instalada: "pro" (completa) ou "go" (leve). O instalador grava /nitro/edition.
 local function detectEdition()
@@ -486,6 +486,8 @@ local langs = {
     rlIncomplete = "Arquivo incompleto: %s",
     rlStrength = "Alcance: %d",
     rlSend = "Enviar",
+    edCopied = "Copiado",
+    edPasted = "Colado",
     cSys = "Sistema",
     cNet = "Rede",
     cLook = "Personalização",
@@ -861,6 +863,8 @@ local langs = {
     rlIncomplete = "Incomplete file: %s",
     rlStrength = "Range: %d",
     rlSend = "Send",
+    edCopied = "Copied",
+    edPasted = "Pasted",
     cSys = "System",
     cNet = "Network",
     cLook = "Personalization",
@@ -1452,6 +1456,7 @@ local function taSetText(ta, text)
   end
   if #ta.lines == 0 then ta.lines = { "" } end
   ta.cy, ta.cx, ta.top, ta.left = 1, 0, 1, 0
+  ta.anchor = nil
   ta.modified = false
 end
 
@@ -1466,6 +1471,26 @@ local function taDraw(ta, showCursor)
     local line = ta.lines[ta.top + n]
     if line then
       put(ta.x, row, usub(line, ta.left + 1, ta.left + ta.w), C.text, C.panel, ta.w)
+    end
+  end
+  -- trecho selecionado (ta.anchor = inicio da selecao, cursor = fim)
+  if ta.anchor then
+    local a, b = ta.anchor, { y = ta.cy, x = ta.cx }
+    if a.y > b.y or (a.y == b.y and a.x > b.x) then a, b = b, a end
+    if not (a.y == b.y and a.x == b.x) then
+      for n = 0, ta.h - 1 do
+        local idx = ta.top + n
+        if idx >= a.y and idx <= b.y and ta.lines[idx] then
+          local line = ta.lines[idx]
+          local c1 = (idx == a.y) and a.x or 0
+          local c2 = (idx == b.y) and b.x or ulen(line)
+          local v1 = math.max(c1, ta.left)
+          local v2 = math.min(c2, ta.left + ta.w)
+          if v2 > v1 then
+            put(ta.x + v1 - ta.left, ta.y + n, usub(line, v1 + 1, v2), C.bg, C.accent)
+          end
+        end
+      end
     end
   end
   if showCursor then
@@ -2052,6 +2077,9 @@ local function setLangIdx(i)
 end
 
 -- a API que os apps recebem (tudo o que eles usam do nucleo)
+-- area de transferencia interna (Ctrl+Insert copia, Shift+Insert cola)
+local CLIP = { text = "" }
+
 local NITRO_API = {
   C = C,
   GO = GO,
@@ -2103,6 +2131,7 @@ local NITRO_API = {
   w = w,
   joinPath = joinPath, parentPath = parentPath,
   taClamp = taClamp,
+  CLIP = CLIP,
   setLang = setLangIdx,
   T = nil,
 }
@@ -2224,6 +2253,7 @@ local function desktop(cfg)
   end
 
   local ext = {}
+  local mods = { ctrl = false, shift = false }
 
   local function render()
     rect(1, 1, w, h - 1, C.bg)
@@ -2481,6 +2511,12 @@ local function desktop(cfg)
 
   -- devolve true quando o evento ja foi tratado aqui (o laco principal nao processa de novo)
   ext.pre = function(ev, a, b, c, d)
+    if ev == "key_down" or ev == "key_up" then
+      local down = (ev == "key_down")
+      if b == 29 or b == 157 then mods.ctrl = down end
+      if b == 42 or b == 54 then mods.shift = down end
+      if ev == "key_up" then return true end
+    end
     -- mensagens da rede (modem_message): so o app Rede Local aberto as recebe
     if ev == "modem_message" then
       if win and win.onModem and not menuOpen then
@@ -2580,7 +2616,7 @@ local function desktop(cfg)
     elseif ev == "key_down" then
       local handled = false
       if win and win.onKey and not menuOpen then
-        handled = guard(win.onKey, win, a, b)
+        handled = guard(win.onKey, win, a, b, mods)
         if handled == "close" then
           handled = true
           win = nil
