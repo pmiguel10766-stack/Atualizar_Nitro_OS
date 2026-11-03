@@ -13,7 +13,7 @@ local uchar = (unicode and unicode.char) or string.char
 
 local fs = cl.proxy(cp.getBootAddress())
 local CONFIG = "/nitro/config.lua"
-local VERSION = "1.14"
+local VERSION = "1.15"
 
 -- edicao instalada: "pro" (completa) ou "go" (leve). O instalador grava /nitro/edition.
 local function detectEdition()
