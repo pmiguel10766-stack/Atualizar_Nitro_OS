@@ -13,7 +13,7 @@ local uchar = (unicode and unicode.char) or string.char
 
 local fs = cl.proxy(cp.getBootAddress())
 local CONFIG = "/nitro/config.lua"
-local VERSION = "1.17"
+local VERSION = "1.18"
 
 -- edicao instalada: "pro" (completa) ou "go" (leve). O instalador grava /nitro/edition.
 local function detectEdition()
@@ -487,6 +487,11 @@ local langs = {
     rlStrength = "Alcance: %d",
     rlSend = "Enviar",
     edCopied = "Copiado",
+    rlAll = "Todos na rede",
+    rlYou = "Você",
+    rlEmptyChat = "Nenhuma mensagem ainda",
+    rlComputers = "Computadores",
+    rlPlaceholder = "Digite uma mensagem...",
     edPasted = "Colado",
     cSys = "Sistema",
     cNet = "Rede",
@@ -864,6 +869,11 @@ local langs = {
     rlStrength = "Range: %d",
     rlSend = "Send",
     edCopied = "Copied",
+    rlAll = "All in network",
+    rlYou = "You",
+    rlEmptyChat = "No messages yet",
+    rlComputers = "Computers",
+    rlPlaceholder = "Type a message...",
     edPasted = "Pasted",
     cSys = "System",
     cNet = "Network",
