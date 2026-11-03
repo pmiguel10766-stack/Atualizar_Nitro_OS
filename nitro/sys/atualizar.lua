@@ -22,7 +22,7 @@ local function parseManifest(data)
   local ok, m = pcall(f)
   if not ok or type(m) ~= "table" then return nil end
   if type(m.version) ~= "string" or type(m.files) ~= "table" then return nil end
-  if #m.files == 0 or #m.files > 40 then return nil end
+  if #m.files == 0 or #m.files > 120 then return nil end
   for _, path in ipairs(m.files) do
     if type(path) ~= "string" or path:find("..", 1, true) or path:sub(1, 1) == "/"
         or not path:match("^[%w_%-%./]+$") then
