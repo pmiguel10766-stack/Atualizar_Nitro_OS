@@ -84,6 +84,8 @@ return function(A, cfg, shared, ...)
       add(T.sUser, cfg.user or "", C.text, "user")
       local hasPass = cfg.hash
       add(T.sPass, hasPass and T.sPassOn or T.sPassNone, hasPass and C.ok or C.warn, "pass")
+      local lm = cfg.lockMin or 0
+      add(T.lkAuto, (lm > 0) and string.format(T.lkMin, lm) or T.lkNever, C.text, "lock")
 
     elseif id == "time" then
       add(T.sLang, langs[cfg.lang].name, C.text, "lang")
@@ -188,6 +190,17 @@ return function(A, cfg, shared, ...)
       startPrompt("user")
     elseif action == "pass" then
       startPrompt(cfg.hash and "pass1" or "pass2")
+    elseif action == "lock" then
+      local opts = { 0, 2, 5, 10 }
+      local cur = cfg.lockMin or 0
+      local nxt = opts[1]
+      for i, v in ipairs(opts) do
+        if v == cur then nxt = opts[(i % #opts) + 1] end
+      end
+      cfg.lockMin = nxt
+      saveConfig(cfg)
+      shared.refresh = true
+      setMsg(T.lkAuto .. ": " .. ((nxt > 0) and string.format(T.lkMin, nxt) or T.lkNever), C.ok)
     elseif action == "showhidden" then
       cfg.hidden = {}
       saveConfig(cfg)
