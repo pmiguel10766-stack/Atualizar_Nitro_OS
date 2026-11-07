@@ -13,7 +13,7 @@ local uchar = (unicode and unicode.char) or string.char
 
 local fs = cl.proxy(cp.getBootAddress())
 local CONFIG = "/nitro/config.lua"
-local VERSION = "1.27"
+local VERSION = "1.28"
 
 -- edicao instalada: "pro" (completa) ou "go" (leve). O instalador grava /nitro/edition.
 local function detectEdition()
@@ -2833,7 +2833,7 @@ local function desktop(cfg)
       elseif win and closeHit(win, a, b) then
         tryClose()
       elseif win and win.onTouch and inside(a, b, win.x, win.y, win.w, win.h) then
-        local handled = guard(win.onTouch, win, a, b)
+        local handled = guard(win.onTouch, win, a, b, c)
         if handled and win then guard(drawWindow, win) end
       end
     elseif ev == "scroll" then
