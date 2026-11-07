@@ -302,7 +302,7 @@ return function(A, ...)
       end
       return taKey(ta, char, code)
     end
-    if ta.anchor and ((char and char >= 32) or code == 14 or code == 28 or char == 13 or code == 211) then
+    if ta.anchor and ((char and char >= 32) or code == 14 or code == 28 or char == 13 or char == 10 or code == 211) then
       deleteSel()
       if code == 14 or code == 211 then return true end
     end
