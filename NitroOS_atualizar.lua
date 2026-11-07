@@ -45,5 +45,6 @@ return {
     "nitro/biblioteca/tabela.lua",
     "nitro/biblioteca/arquivo.lua",
     "nitro/sys/redelocal.lua",
+     "nitro/sys/editorlua.lua",
   },
 }
