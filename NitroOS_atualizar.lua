@@ -2,7 +2,7 @@
 -- So descreve a versao e os arquivos (nao executa nada). Para lancar uma versao nova,
 -- mude "version" aqui e envie os arquivos novos para o GitHub.
 return {
-  version = "1.25",
+  version = "1.26",
   files = {
     "init.lua",
     "nitro/boot.lua",
