@@ -318,7 +318,16 @@ end
     setMsg(T.edPasted, C.ok)
   end
 
-  win.onTouch = function(self, x, y)
+  win.onTouch = function(self, x, y, btn)
+    -- botao do meio: coloca o cursor no clique e cola o que esta na area de transferencia
+    if btn == 2 then
+      if st.mode == "edit" and y >= ta.y and y < ta.y + ta.h and x >= ta.x and x < ta.x + ta.w then
+        taClick(ta, x, y)
+        pasteText(CLIP.text or "")
+        return true
+      end
+      return false
+    end
     if y == btnY then
       local id = hitButton(curButtons(), x)
       if id == "new" then
