@@ -13,7 +13,7 @@ local uchar = (unicode and unicode.char) or string.char
 
 local fs = cl.proxy(cp.getBootAddress())
 local CONFIG = "/nitro/config.lua"
-local VERSION = "1.25"
+local VERSION = "1.26"
 
 -- edicao instalada: "pro" (completa) ou "go" (leve). O instalador grava /nitro/edition.
 local function detectEdition()
@@ -498,6 +498,8 @@ local langs = {
     rlStrength = "Alcance: %d",
     rlSend = "Enviar",
     edCopied = "Copiado",
+    mEditorLua = "Editor Lua",
+    bSave = "Salvar",
     mLock = "Bloquear",
     lkPress = "Pressione uma tecla ou clique para entrar",
     lkEnter = "Digite a senha",
@@ -925,6 +927,8 @@ local langs = {
     rlStrength = "Range: %d",
     rlSend = "Send",
     edCopied = "Copied",
+    mEditorLua = "Lua Editor",
+    bSave = "Save",
     mLock = "Lock",
     lkPress = "Press a key or click to sign in",
     lkEnter = "Enter password",
@@ -2351,6 +2355,7 @@ local function desktop(cfg)
     local all = {
       { id = "files", label = T.mFiles },
       { id = "editor", label = T.mEditor },
+      { id = "editorlua", label = T.mEditorLua },
       { id = "notes", label = T.mNotes },
       { id = "calc", label = T.mCalc },
       { id = "monitor", label = T.mMonitor },
@@ -2451,6 +2456,8 @@ local function desktop(cfg)
       win = guard(openSys, "arquivos", it.arg)
     elseif it.id == "calc" then
       win = guard(openSys, "calc")
+    elseif it.id == "editorlua" then
+      win = guard(openSys, "editorlua")
     elseif it.id == "editor" then
       win = guard(openSys, "editor")
     elseif it.id == "notes" then
