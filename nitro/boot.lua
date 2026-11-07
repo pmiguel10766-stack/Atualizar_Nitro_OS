@@ -13,7 +13,7 @@ local uchar = (unicode and unicode.char) or string.char
 
 local fs = cl.proxy(cp.getBootAddress())
 local CONFIG = "/nitro/config.lua"
-local VERSION = "1.26"
+local VERSION = "1.27"
 
 -- edicao instalada: "pro" (completa) ou "go" (leve). O instalador grava /nitro/edition.
 local function detectEdition()
@@ -1668,7 +1668,7 @@ local function taKey(ta, char, code)
     ta.cy = ta.cy - ta.h
   elseif code == 209 then
     ta.cy = ta.cy + ta.h
-  elseif code == 28 or code == 156 or char == 13 then
+  elseif code == 28 or code == 156 or char == 13 or char == 10 then
     -- nova linha com a mesma indentacao; abre um nivel a mais depois de then/do/function...
     local indent = line:match("^(%s*)") or ""
     local t = line:match("^%s*(.-)%s*$")
