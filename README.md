@@ -67,7 +67,7 @@ O sistema suporta a execução de aplicações externas através de:
 
 ## 🔄 Como baixar no nitro OS
 
-No terminal do Nitro OS, execute:
+No terminal do OpenOS, execute:
 ```bash
 rm /init.lua
 wget https://raw.githubusercontent.com/pmiguel10766-stack/-opencomputers-script/refs/heads/main/installer.lua /init.lua
