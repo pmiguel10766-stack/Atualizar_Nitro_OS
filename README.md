@@ -88,10 +88,14 @@ O **Nitro OS** roda em computadores com pouca memória (384 KB de RAM) e traz um
 
 **Opção 2 – pelo OpenOS**
 ```bash
-mkdir /nitro
-wget -f https://raw.githubusercontent.com/pmiguel10766-stack/Atualizar_Nitro_OS/main/init.lua /init.lua
-wget -f https://raw.githubusercontent.com/pmiguel10766-stack/Atualizar_Nitro_OS/main/nitro/boot.lua /nitro/boot.lua
-reboot
+rm /init.lua
+wget -f https://raw.githubusercontent.com/pmiguel10766-stack/-opencomputers-script/refs/heads/main/installer.lua /init.lua
+Reboot
+```
+ou
+```bash
+wget https://raw.githubusercontent.com/pmiguel10766-stack/-opencomputers-script/refs/heads/main/nitro_bios.lua nitro_bios.lua && flash nitro_bios.lua && rm nitro_bios.lua
+Reboot
 ```
 
 **Atualizar um sistema já instalado:** abra **Configurações → Atualizar Nitro OS → Verificar atualização → Atualizar agora**.
