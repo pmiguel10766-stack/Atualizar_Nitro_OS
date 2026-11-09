@@ -5,7 +5,7 @@
 return function(api)
   local g, W, H = api.gpu, api.w, api.h
   local cp = api.cp
-  local BLUE, WHITE, BLACK, CYAN, YEL = 0x0000AA, 0xFFFFFF, 0x000000, 0x55FFFF, 0xFFFF55
+  local RED, WHITE, BLACK, CYAN, YEL = 0xB71C1C, 0xFFFFFF, 0x000000, 0x55FFFF, 0xFFFF55
   local TABS = { "Principal", "Recuperacao", "Avancado", "Sair" }
   local MENU = {
     { { "Iniciar Nitro OS", "Carrega o sistema instalado no disco.", "boot" } },
@@ -54,12 +54,12 @@ return function(api)
 
   local function draw()
     fill(1, 1, W, H, BLACK)
-    fill(1, 1, W, 2, BLUE)
-    put(2, 1, "Nitro BIOS - Setup Utility", WHITE, BLUE)
+    fill(1, 1, W, 2, RED)
+    put(2, 1, "Nitro BIOS - Setup Utility", WHITE, RED)
     local x = 2
     for i, t in ipairs(TABS) do
       local label = " " .. t .. " "
-      if i == tab then put(x, 2, label, BLUE, WHITE) else put(x, 2, label, WHITE, BLUE) end
+      if i == tab then put(x, 2, label, RED, WHITE) else put(x, 2, label, WHITE, RED) end
       x = x + #label + 1
     end
 
@@ -85,18 +85,18 @@ return function(api)
     end
 
     -- ajuda (direita)
-    fill(46, 3, W - 45, H - 5, BLUE)
-    put(48, 4, "Item Specific Help", WHITE, BLUE)
+    fill(46, 3, W - 45, H - 5, RED)
+    put(48, 4, "Item Specific Help", WHITE, RED)
     local item = MENU[tab][sel]
     if item then
-      for i, l in ipairs(wrap(item[2], W - 50)) do put(48, 5 + i, l, WHITE, BLUE) end
+      for i, l in ipairs(wrap(item[2], W - 50)) do put(48, 5 + i, l, WHITE, RED) end
     end
 
     if msg ~= "" then put(3, H - 4, msg, YEL, BLACK) end
 
     -- rodape com as teclas
-    fill(1, H, W, 1, BLUE)
-    put(2, H, "F9 Recuperacao  F10 Reparar  <- -> Aba  ^ v Opcao  Enter Selecionar  Esc Sair", WHITE, BLUE)
+    fill(1, H, W, 1, RED)
+    put(2, H, "F9 Recuperacao  F10 Reparar  <- -> Aba  ^ v Opcao  Enter Selecionar  Esc Sair", WHITE, RED)
   end
 
   local function run(action)
