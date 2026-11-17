@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Imagem.jpg" alt="Banner do Nitro OS" width="100%" />
+</p>
+
 # 🚀 Nitro OS - OpenComputers (Minecraft 1.7.10)
 
 Sistema operacional feito em Lua para o mod **OpenComputers** no Minecraft 1.7.10.
