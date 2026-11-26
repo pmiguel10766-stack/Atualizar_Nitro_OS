@@ -2,10 +2,10 @@
   <img src="Imagem.jpg" alt="Banner do Nitro OS" width="100%" />
 </p>
 
-# 🚀 Nitro OS - OpenComputers (Minecraft 1.7.10)
+# Nitro OS 
 
 Sistema operacional feito em Lua para o mod **OpenComputers** no Minecraft 1.7.10.
-Versão atual: **1.30**.
+Versão atual: **1.38**.
 
 ---
 
@@ -107,7 +107,7 @@ Reboot
 ---
 
 ## 📝 Histórico recente
-
+- **1.38:** novo API
 - **1.30:** apps instalados rodam em ambiente restrito (API `nitro`).
 - **1.29:** bloqueio de 5 minutos depois de 3 senhas erradas.
 - **1.28:** colar com o botão do meio nos editores.
